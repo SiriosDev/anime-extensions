@@ -254,6 +254,14 @@ class HentaiSaturn :
         State("3", "Droppato"),
     )
 
+    internal class Type(val id: String, name: String) : AnimeFilter.CheckBox(name)
+    private class TypeList(types: List<Type>) : AnimeFilter.Group<Type>("Tipo", types)
+    private fun getTypes() = listOf(
+        Type("3", "OVA"),
+        Type("4", "Special"),
+        Type("5", "ONA"),
+    )
+
     internal class Lang(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua", langs)
     private fun getLangs() = listOf(
@@ -268,6 +276,7 @@ class HentaiSaturn :
         GenreList(getGenres()),
         YearList(getYears()),
         StateList(getStates()),
+        TypeList(getTypes()),
         LangList(getLangs()),
     )
 
@@ -275,6 +284,7 @@ class HentaiSaturn :
         var totalstring = ""
         var variantgenre = 0
         var variantstate = 0
+        var varianttype = 0
         var variantyear = 0
         filters.forEach { filter ->
             when (filter) {
@@ -301,6 +311,15 @@ class HentaiSaturn :
                         if (state.state) {
                             totalstring = totalstring + "&states%5B" + variantstate.toString() + "%5D=" + state.id
                             variantstate++
+                        }
+                    }
+                }
+
+                is TypeList -> { // ---Type
+                    filter.state.forEach { type ->
+                        if (type.state) {
+                            totalstring = totalstring + "&types%5B" + varianttype.toString() + "%5D=" + type.id
+                            varianttype++
                         }
                     }
                 }
