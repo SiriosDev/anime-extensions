@@ -145,7 +145,13 @@ class AnimeSaturn :
         val anime = SAnime.create()
         anime.title = document.selectFirst("h1")!!.text()
         anime.author = document.selectFirst("div a[href*=studios]")?.text()
-        anime.status = parseStatus(document.selectFirst("div a[href*=states]")?.text().orEmpty())
+        val statusText = document.selectFirst("div a[href*=states]")?.text().orEmpty()
+        anime.status = parseStatus(statusText)
+        if (statusText == "Finito" || statusText == "Droppato") {
+            anime.update_strategy = AnimeUpdateStrategy.ONLY_FETCH_ONCE
+        } else {
+            anime.update_strategy = AnimeUpdateStrategy.ALWAYS_UPDATE
+        }
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
         val alterTitle = document.selectFirst(".ag-head > .mt-1")?.text().orEmpty().replace(Regex("\\(\\w+\\)"), "").trim()
@@ -175,6 +181,8 @@ class AnimeSaturn :
     private fun parseStatus(statusString: String): Int = when {
         statusString.contains("In corso") -> SAnime.ONGOING
         statusString.contains("Finito") -> SAnime.COMPLETED
+        statusString.contains("Droppato") -> SAnime.CANCELLED
+        statusString.contains("Non rilasciato") -> SAnime.UNKNOWN
         else -> SAnime.UNKNOWN
     }
 
