@@ -76,6 +76,7 @@ class AnimeSaturn :
 
         val episodeResponse = client.newCall(GET(baseUrl + episode.url)).execute()
         if (!episodeResponse.isSuccessful) {
+            episodeResponse.close()
             return episode
         }
 
@@ -89,6 +90,7 @@ class AnimeSaturn :
         if (tvEpisode.datePublished.isNotEmpty()) episode.date_upload = dateFormat.tryParse(tvEpisode.datePublished)
         episode.episode_number = tvEpisode.episodeNumber
         episode.name = tvEpisode.name.substringAfter(tvEpisode.partOfSeries.name).trim().ifEmpty { fallbackName }
+        episodeResponse.close()
         return episode
     }
 
