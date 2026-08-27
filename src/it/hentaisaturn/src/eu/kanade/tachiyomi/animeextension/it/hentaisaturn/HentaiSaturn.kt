@@ -153,13 +153,12 @@ class HentaiSaturn :
             document.selectFirst("div.text-center > p.mt-1")?.text().orEmpty(),
         ).replace("(ITA)", "").trim()
         val descritpionText = document.selectFirst("section:has(h2) div")?.text()?.trim().orEmpty()
-        val typeText = document.selectXpath("//dt[text()=\"Tipo\"]/following-sibling::dd").text().trim()
-        val releaseText = document.selectXpath("//dt[text()=\"Uscita\"]/following-sibling::dd").text().trim()
-        val langText = document.selectXpath("//dt[text()=\"Lingua\"]/following-sibling::dd").text().trim()
-        val durationText = document.selectXpath("//dt[text()=\"Durata\"]/following-sibling::dd").text().trim()
-        val viewsText = document.selectXpath("//dt[text()=\"Visualizzazioni\"]/following-sibling::dd").text().trim()
-        val voteText = document.selectXpath("//dt[text()=\"Voto\"]/following-sibling::dd").text().trim().split(" ")[0]
-        val voteCountText = document.selectXpath("//dt[text()=\"Voto\"]/following-sibling::dd").text().trim().split(" ")[1]
+        val typeText = document.selectFirst("div:nth-of-type(1) > dd")?.text()?.trim().orEmpty()
+        val releaseText = document.selectFirst("div:nth-of-type(5) > dd")?.text()?.trim().orEmpty()
+        val langText = document.selectFirst("div:nth-of-type(3) > dd > a")?.text()?.trim().orEmpty()
+        val durationText = document.selectFirst("div:nth-of-type(7) > dd")?.text()?.trim().orEmpty()
+        val viewsText = document.selectFirst("div:nth-of-type(8) > dd")?.text()?.trim().orEmpty()
+        val voteText = document.selectFirst("div:nth-of-type(9) > dd")?.text()?.trim().orEmpty().split(" ")
 
         anime.description = buildString {
             if (!anime.title.contains(alterTitle, true) && !alterTitle.isEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
@@ -169,7 +168,7 @@ class HentaiSaturn :
             if (!releaseText.isEmpty()) append("Uscita: ${releaseText}\n\n")
             if (!durationText.isEmpty()) append("Durata Media: ${durationText}\n\n")
             if (!viewsText.isEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
-            if (!voteText.isEmpty()) append("Voto: ★$voteText/10 ${voteCountText}\n\n")
+            if (!voteText.isEmpty()) append("Voto: ★${voteText[0]}/10 ${voteText[1]}\n\n")
         }
         return anime
     }
