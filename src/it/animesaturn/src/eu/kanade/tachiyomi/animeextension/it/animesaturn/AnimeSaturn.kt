@@ -16,12 +16,15 @@ import keiyoushi.utils.addListPreference
 import keiyoushi.utils.delegate
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
+import keiyoushi.utils.tryParse
 import kotlinx.serialization.Serializable
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 import kotlin.io.encoding.Base64
 
 class AnimeSaturn :
@@ -63,11 +66,32 @@ class AnimeSaturn :
     override fun episodeFromElement(element: Element): SEpisode {
         val episode = SEpisode.create()
         episode.setUrlWithoutDomain(element.attr("href").replace("episode/", "anime/").replace("watch/", "stream/"))
-        val epText = element.attr("title")
-        episode.episode_number = epText.substringAfter("Episodio ").toFloatOrNull() ?: 0f
+        val episodePage = client.newCall(GET(baseUrl + episode.url)).execute().asJsoup()
+        val tvEpisode = episodePage.head()
+            .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
+            ?.data()
+            .orEmpty().parseAs<TVEpisodeLD>()
+        if (tvEpisode.datePublished.isNotEmpty()) episode.date_upload = dateFormat.tryParse(tvEpisode.datePublished)
+        val epText = tvEpisode.name.substringAfter(tvEpisode.partOfSeries.name).trim().orEmpty()
+        episode.episode_number = tvEpisode.episodeNumber
         episode.name = epText
         return episode
     }
+
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
+
+    @Serializable
+    internal class TVEpisodeLD(
+        val name: String,
+        val episodeNumber: Float,
+        val datePublished: String,
+        val partOfSeries: TVSeriesLD,
+    )
+
+    @Serializable
+    internal class TVSeriesLD(
+        val name: String,
+    )
 
     private val playlistUtils by lazy { PlaylistUtils(client, headers) }
 
@@ -196,6 +220,7 @@ class AnimeSaturn :
     // Filters
     internal class Genre(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class GenreList(genres: List<Genre>) : AnimeFilter.Group<Genre>("Generi", genres)
+
     private fun getGenres() = listOf(
         Genre("3", "Arti Marziali"),
         Genre("5", "Avanguardia"),
@@ -246,6 +271,7 @@ class AnimeSaturn :
 
     internal class Year(val id: String) : AnimeFilter.CheckBox(id)
     private class YearList(years: List<Year>) : AnimeFilter.Group<Year>("Anno di Uscita", years)
+
     private fun getYears(): List<Year> {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         return (1960..currentYear).map { Year(it.toString()) }
@@ -253,6 +279,7 @@ class AnimeSaturn :
 
     internal class State(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class StateList(states: List<State>) : AnimeFilter.Group<State>("Stato", states)
+
     private fun getStates() = listOf(
         State("0", "In corso"),
         State("1", "Finito"),
@@ -262,6 +289,7 @@ class AnimeSaturn :
 
     internal class Type(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class TypeList(types: List<Type>) : AnimeFilter.Group<Type>("Tipo", types)
+
     private fun getTypes() = listOf(
         Type("1", "TV"),
         Type("2", "Movie"),
@@ -272,6 +300,7 @@ class AnimeSaturn :
 
     internal class Lang(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua", langs)
+
     private fun getLangs() = listOf(
         Lang("jp", "Giapponese"),
         Lang("it", "Italiano"),
@@ -282,6 +311,7 @@ class AnimeSaturn :
 
     internal class Subs(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class SubsList(subs: List<Subs>) : AnimeFilter.Group<Subs>("Sottotitoli", subs)
+
     private fun getSubs() = listOf(
         Subs("0", "Sottotitolato"),
         Subs("1", "Doppiato"),
@@ -289,6 +319,7 @@ class AnimeSaturn :
 
     internal class ReleaseSeason(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class ReleaseSeasonList(seasons: List<ReleaseSeason>) : AnimeFilter.Group<ReleaseSeason>("Stagione di Uscita", seasons)
+
     private fun getReleaseSeasons() = listOf(
         ReleaseSeason("spring", "Primavera"),
         ReleaseSeason("summer", "Estate"),
@@ -300,7 +331,9 @@ class AnimeSaturn :
     internal class Order(val id: String, name: String) : AnimeFilter.CheckBox(name) {
         override fun toString(): String = name
     }
+
     private class OrderList(sorts: Array<Order>) : AnimeFilter.Select<Order>("Ordina per", sorts)
+
     private fun getOrder() = arrayOf(
         Order("standard", "Standard"),
         Order("recent", "Ultime aggiunte"),
