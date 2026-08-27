@@ -85,12 +85,22 @@ class AnimeSaturn :
             .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
             ?.data()
             ?.let { runCatching { it.parseAs<TVEpisodeLD>() }.getOrNull() }
-            ?: return episode
-
-        if (tvEpisode.datePublished.isNotEmpty()) episode.date_upload = dateFormat.tryParse(tvEpisode.datePublished)
-        episode.episode_number = tvEpisode.episodeNumber
-        episode.name = tvEpisode.name.substringAfter(tvEpisode.partOfSeries.name).trim().ifEmpty { fallbackName }
         episodeResponse.close()
+
+        if (tvEpisode == null) return episode
+
+        tvEpisode.datePublished
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { episode.date_upload = dateFormat.tryParse(it) }
+
+        tvEpisode.episodeNumber?.let { episode.episode_number = it }
+
+        val seriesName = tvEpisode.partOfSeries?.name
+        episode.name = tvEpisode.name
+            ?.let { name -> seriesName?.let { name.substringAfter(it).trim() } ?: name }
+            ?.ifEmpty { fallbackName }
+            ?: fallbackName
+
         return episode
     }
 
@@ -98,15 +108,15 @@ class AnimeSaturn :
 
     @Serializable
     internal class TVEpisodeLD(
-        val name: String,
-        val episodeNumber: Float,
-        val datePublished: String,
-        val partOfSeries: TVSeriesLD,
+        val name: String? = null,
+        val episodeNumber: Float? = null,
+        val datePublished: String? = null,
+        val partOfSeries: TVSeriesLD? = null,
     )
 
     @Serializable
     internal class TVSeriesLD(
-        val name: String,
+        val name: String? = null,
     )
 
     private val playlistUtils by lazy { PlaylistUtils(client, headers) }
