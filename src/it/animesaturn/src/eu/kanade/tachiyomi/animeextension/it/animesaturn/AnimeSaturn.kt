@@ -5,6 +5,7 @@ import aniyomi.lib.playlistutils.PlaylistUtils
 import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
+import eu.kanade.tachiyomi.animesource.model.AnimeUpdateStrategy
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
@@ -47,8 +48,6 @@ class AnimeSaturn :
     override fun popularAnimeSelector(): String = "a.group[href]:not(.flex)"
 
     override fun popularAnimeRequest(page: Int): Request = GET("$baseUrl/ongoing/$page")
-
-    private fun formatTitle(titlestring: String): String = titlestring.replace("(ITA)", "Dub ITA")
 
     override fun popularAnimeFromElement(element: Element): SAnime = searchAnimeFromElement(element)
 
@@ -128,7 +127,7 @@ class AnimeSaturn :
     override fun searchAnimeFromElement(element: Element): SAnime {
         val anime = SAnime.create()
         anime.setUrlWithoutDomain(element.attr("href"))
-        anime.title = formatTitle(element.selectFirst("h3")!!.text())
+        anime.title = element.selectFirst("h3")!!.text()
         anime.thumbnail_url = element.selectFirst("img")?.attr("src")
         return anime
     }
@@ -144,14 +143,12 @@ class AnimeSaturn :
 
     override fun animeDetailsParse(document: Document): SAnime {
         val anime = SAnime.create()
-        anime.title = formatTitle(document.selectFirst("h1")!!.text())
+        anime.title = document.selectFirst("h1")!!.text()
         anime.author = document.selectFirst("div a[href*=studios]")?.text()
         anime.status = parseStatus(document.selectFirst("div a[href*=states]")?.text().orEmpty())
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
-        val alterTitle = formatTitle(
-            document.selectFirst(".ag-head > .mt-1")?.text().orEmpty(),
-        ).replace("(ITA)", "").trim()
+        val alterTitle = document.selectFirst(".ag-head > .mt-1")?.text().orEmpty().replace(Regex("\\(\\w+\\)"), "").trim()
         val descriptionText = document.selectFirst(".text-pretty")?.text()?.trim().orEmpty()
         val typeText = document.selectFirst("a:nth-of-type(1) > .flex > .font-medium")?.text()?.trim().orEmpty()
         val releaseSeasonText = document.selectFirst("a:nth-of-type(2) > .flex > .font-medium")?.text()?.trim().orEmpty()
@@ -163,14 +160,14 @@ class AnimeSaturn :
         val votersText = document.selectFirst("#anime-votes")?.text()?.trim().orEmpty()
 
         anime.description = buildString {
-            if (!anime.title.contains(alterTitle, true) && !alterTitle.isEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
+            if (anime.title.lowercase() != alterTitle.lowercase() && !alterTitle.isEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
             if (!langText.isEmpty()) append("Lingua: ${langText}\n\n")
             if (!descriptionText.isEmpty()) append("Descrizione: ${descriptionText}\n\n")
             if (!typeText.isEmpty()) append("Tipo: ${typeText}\n\n")
-            if (!releaseDateText.isEmpty()) append("Uscita: ${releaseSeasonText} - ${releaseDateText}\n\n")
+            if (!releaseDateText.isEmpty()) append("Uscita: $releaseSeasonText - ${releaseDateText}\n\n")
             if (!durationText.isEmpty()) append("Durata Media: ${durationText}\n\n")
             if (!viewsText.isEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
-            if (!voteText.isEmpty()) append("Voto: ★${voteText[0]}/10 (${votersText})\n\n")
+            if (!voteText.isEmpty()) append("Voto: ★${voteText[0]}/10 ($votersText)\n\n")
         }
         return anime
     }
@@ -236,7 +233,7 @@ class AnimeSaturn :
         Genre("40", "Vampiri"),
         Genre("48", "Veicoli"),
         Genre("41", "Yaoi"),
-        Genre("42", "Yuri")
+        Genre("42", "Yuri"),
     )
 
     internal class Year(val id: String) : AnimeFilter.CheckBox(id)
@@ -289,7 +286,7 @@ class AnimeSaturn :
         ReleaseSeason("summer", "Estate"),
         ReleaseSeason("fall", "Autunno"),
         ReleaseSeason("winter", "Inverno"),
-        ReleaseSeason("unknown", "Sconosciuta")
+        ReleaseSeason("unknown", "Sconosciuta"),
     )
 
     internal class Order(val id: String, name: String) : AnimeFilter.CheckBox(name) {
