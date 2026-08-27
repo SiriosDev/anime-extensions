@@ -150,10 +150,28 @@ class AnimeSaturn :
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
         val alterTitle = formatTitle(
-            document.selectFirst("p.mt-1")?.text().orEmpty(),
+            document.selectFirst(".ag-head > .mt-1")?.text().orEmpty(),
         ).replace("(ITA)", "").trim()
-        anime.description = document.selectFirst("section:has(h2) div")?.text()?.trim().orEmpty()
-        if (!anime.title.contains(alterTitle, true) && !alterTitle.isEmpty()) anime.description = anime.description + "\n\nTitolo Alternativo: " + alterTitle
+        val descriptionText = document.selectFirst(".text-pretty")?.text()?.trim().orEmpty()
+        val typeText = document.selectFirst("a:nth-of-type(1) > .flex > .font-medium")?.text()?.trim().orEmpty()
+        val releaseSeasonText = document.selectFirst("a:nth-of-type(2) > .flex > .font-medium")?.text()?.trim().orEmpty()
+        val releaseDateText = document.selectFirst("div:nth-of-type(2) > .font-medium")?.text()?.trim().orEmpty()
+        val langText = document.selectFirst("a:nth-of-type(3) .font-medium")?.text()?.trim().orEmpty()
+        val durationText = document.selectFirst("div:nth-of-type(4) > .font-medium")?.text()?.trim().orEmpty()
+        val viewsText = document.selectFirst("div:nth-of-type(6) > .font-medium")?.text()?.trim().orEmpty()
+        val voteText = document.selectFirst("#anime-score")?.text()?.trim().orEmpty()
+        val votersText = document.selectFirst("#anime-votes")?.text()?.trim().orEmpty()
+
+        anime.description = buildString {
+            if (!anime.title.contains(alterTitle, true) && !alterTitle.isEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
+            if (!langText.isEmpty()) append("Lingua: ${langText}\n\n")
+            if (!descriptionText.isEmpty()) append("Descrizione: ${descriptionText}\n\n")
+            if (!typeText.isEmpty()) append("Tipo: ${typeText}\n\n")
+            if (!releaseDateText.isEmpty()) append("Uscita: ${releaseSeasonText} - ${releaseDateText}\n\n")
+            if (!durationText.isEmpty()) append("Durata Media: ${durationText}\n\n")
+            if (!viewsText.isEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
+            if (!voteText.isEmpty()) append("Voto: ★${voteText[0]}/10 (${votersText})\n\n")
+        }
         return anime
     }
 
