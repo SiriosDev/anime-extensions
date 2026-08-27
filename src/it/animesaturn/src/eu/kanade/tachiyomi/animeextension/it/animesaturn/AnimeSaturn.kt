@@ -65,14 +65,18 @@ class AnimeSaturn :
 
     override fun episodeFromElement(element: Element): SEpisode {
         val episode = SEpisode.create()
-        episode.setUrlWithoutDomain(element.attr("href").replace("episode/", "anime/").replace("watch/", "stream/"))
+        episode.setUrlWithoutDomain(
+            element.attr("href")
+                .replace("episode/", "anime/")
+                .replace("watch/", "stream/"),
+        )
         val episodePage = client.newCall(GET(baseUrl + episode.url)).execute().asJsoup()
         val tvEpisode = episodePage.head()
             .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
             ?.data()
             .orEmpty().parseAs<TVEpisodeLD>()
         if (tvEpisode.datePublished.isNotEmpty()) episode.date_upload = dateFormat.tryParse(tvEpisode.datePublished)
-        val epText = tvEpisode.name.substringAfter(tvEpisode.partOfSeries.name).trim().orEmpty()
+        val epText = tvEpisode.name.substringAfter(tvEpisode.partOfSeries.name).trim()
         episode.episode_number = tvEpisode.episodeNumber
         episode.name = epText
         return episode
@@ -117,7 +121,7 @@ class AnimeSaturn :
     }
 
     private fun decodeUrl(url: String, token: String): String {
-        val base = Base64.Default.decode(url).decodeToString()
+        val base = Base64.decode(url).decodeToString()
         val builder = StringBuilder()
         for (i in base.indices) {
             builder.append(base[i].code.xor(token[i % token.length].code).toChar())
@@ -178,7 +182,8 @@ class AnimeSaturn :
         }
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
-        val alterTitle = document.selectFirst(".ag-head > .mt-1")?.text().orEmpty().replace(Regex("\\(\\w+\\)"), "").trim()
+        val alterTitle = document.selectFirst(".ag-head > .mt-1")?.text().orEmpty()
+            .replace(Regex("\\(\\w+\\)"), "").trim()
         val descriptionText = document.selectFirst(".text-pretty")?.text()?.trim().orEmpty()
         val typeText = document.selectFirst("a:nth-of-type(1) > .flex > .font-medium")?.text()?.trim().orEmpty()
         val releaseSeasonText = document.selectFirst("a:nth-of-type(2) > .flex > .font-medium")?.text()?.trim().orEmpty()
@@ -190,14 +195,14 @@ class AnimeSaturn :
         val votersText = document.selectFirst("#anime-votes")?.text()?.trim().orEmpty()
 
         anime.description = buildString {
-            if (anime.title.lowercase() != alterTitle.lowercase() && !alterTitle.isEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
-            if (!langText.isEmpty()) append("Lingua: ${langText}\n\n")
-            if (!descriptionText.isEmpty()) append("Descrizione: ${descriptionText}\n\n")
-            if (!typeText.isEmpty()) append("Tipo: ${typeText}\n\n")
-            if (!releaseDateText.isEmpty()) append("Uscita: $releaseSeasonText - ${releaseDateText}\n\n")
-            if (!durationText.isEmpty()) append("Durata Media: ${durationText}\n\n")
-            if (!viewsText.isEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
-            if (!voteText.isEmpty()) append("Voto: ★${voteText[0]}/10 ($votersText)\n\n")
+            if (anime.title.lowercase() != alterTitle.lowercase() && alterTitle.isNotEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
+            if (langText.isNotEmpty()) append("Lingua: ${langText}\n\n")
+            if (descriptionText.isNotEmpty()) append("Descrizione: ${descriptionText}\n\n")
+            if (typeText.isNotEmpty()) append("Tipo: ${typeText}\n\n")
+            if (releaseDateText.isNotEmpty()) append("Uscita: $releaseSeasonText - ${releaseDateText}\n\n")
+            if (durationText.isNotEmpty()) append("Durata Media: ${durationText}\n\n")
+            if (viewsText.isNotEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
+            if (voteText.isNotEmpty()) append("Voto: ★${voteText[0]}/10 ($votersText)\n\n")
         }
         return anime
     }
@@ -359,21 +364,21 @@ class AnimeSaturn :
     )
 
     private fun getSearchParameters(filters: AnimeFilterList): String {
-        var totalstring = ""
-        var variantgenre = 0
-        var variantstate = 0
-        var variantseason = 0
-        var varianttype = 0
-        var variantyear = 0
-        var variantlang = 0
-        var variantsubs = 0
+        var totalString = ""
+        var variantGenre = 0
+        var variantState = 0
+        var variantSeason = 0
+        var variantType = 0
+        var variantYear = 0
+        var variantLang = 0
+        var variantSubs = 0
         filters.forEach { filter ->
             when (filter) {
                 is GenreList -> { // ---Genre
                     filter.state.forEach { genre ->
                         if (genre.state) {
-                            totalstring = totalstring + "&categories%5B" + variantgenre.toString() + "%5D=" + genre.id
-                            variantgenre++
+                            totalString = totalString + "&categories%5B" + variantGenre.toString() + "%5D=" + genre.id
+                            variantGenre++
                         }
                     }
                 }
@@ -381,8 +386,8 @@ class AnimeSaturn :
                 is YearList -> { // ---Year
                     filter.state.forEach { year ->
                         if (year.state) {
-                            totalstring = totalstring + "&years%5B" + variantyear.toString() + "%5D=" + year.id
-                            variantyear++
+                            totalString = totalString + "&years%5B" + variantYear.toString() + "%5D=" + year.id
+                            variantYear++
                         }
                     }
                 }
@@ -390,8 +395,8 @@ class AnimeSaturn :
                 is StateList -> { // ---State
                     filter.state.forEach { state ->
                         if (state.state) {
-                            totalstring = totalstring + "&states%5B" + variantstate.toString() + "%5D=" + state.id
-                            variantstate++
+                            totalString = totalString + "&states%5B" + variantState.toString() + "%5D=" + state.id
+                            variantState++
                         }
                     }
                 }
@@ -399,8 +404,8 @@ class AnimeSaturn :
                 is TypeList -> { // ---Type
                     filter.state.forEach { type ->
                         if (type.state) {
-                            totalstring = totalstring + "&types%5B" + varianttype.toString() + "%5D=" + type.id
-                            varianttype++
+                            totalString = totalString + "&types%5B" + variantType.toString() + "%5D=" + type.id
+                            variantType++
                         }
                     }
                 }
@@ -408,8 +413,8 @@ class AnimeSaturn :
                 is LangList -> { // ---Lang
                     filter.state.forEach { lang ->
                         if (lang.state) {
-                            totalstring = totalstring + "&languages%5B" + variantlang.toString() + "%5D=" + lang.id
-                            variantlang++
+                            totalString = totalString + "&languages%5B" + variantLang.toString() + "%5D=" + lang.id
+                            variantLang++
                         }
                     }
                 }
@@ -417,8 +422,8 @@ class AnimeSaturn :
                 is SubsList -> { // ---Subs
                     filter.state.forEach { subs ->
                         if (subs.state) {
-                            totalstring = totalstring + "&subtitles%5B" + variantsubs.toString() + "%5D=" + subs.id
-                            variantsubs++
+                            totalString = totalString + "&subtitles%5B" + variantSubs.toString() + "%5D=" + subs.id
+                            variantSubs++
                         }
                     }
                 }
@@ -426,27 +431,27 @@ class AnimeSaturn :
                 is ReleaseSeasonList -> { // ---Release Season
                     filter.state.forEach { season ->
                         if (season.state) {
-                            totalstring = totalstring + "&release_seasons%5B" + variantseason.toString() + "%5D=" + season.id
-                            variantseason++
+                            totalString = totalString + "&release_seasons%5B" + variantSeason.toString() + "%5D=" + season.id
+                            variantSeason++
                         }
                     }
                 }
 
                 is OrderList -> { // ---Sorts
                     val order = filter.values[filter.state]
-                    totalstring = totalstring + "&sort=" + order.id
+                    totalString = totalString + "&sort=" + order.id
                 }
 
                 else -> {}
             }
         }
-        return totalstring
+        return totalString
     }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         screen.addListPreference(
             key = PREF_QUALITY,
-            title = "Qualità preferita",
+            title = "Qualità Preferita",
             entries = QUALITY_ENTRIES,
             entryValues = QUALITY_VALUES,
             default = QUALITY_DEFAULT,
@@ -455,7 +460,7 @@ class AnimeSaturn :
 
         screen.addListPreference(
             key = PREF_DOMAIN,
-            title = "Domain in uso (riavvio dell'app richiesto)",
+            title = "Dominio in Uso (Riavvio dell'App Richiesto)",
             entries = DOMAIN_ENTRIES,
             entryValues = DOMAIN_VALUES,
             default = DOMAIN_DEFAULT,
