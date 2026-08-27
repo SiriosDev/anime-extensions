@@ -294,6 +294,7 @@ class HentaiSaturn :
         var variantstate = 0
         var varianttype = 0
         var variantyear = 0
+        var variantlang = 0
         var variantsub = 0
         filters.forEach { filter ->
             when (filter) {
@@ -329,6 +330,15 @@ class HentaiSaturn :
                         if (type.state) {
                             totalstring = totalstring + "&types%5B" + varianttype.toString() + "%5D=" + type.id
                             varianttype++
+                        }
+                    }
+                }
+
+                is LangList -> { // ---Lang
+                    filter.state.forEach { lang ->
+                        if (lang.state) {
+                            totalstring = totalstring + "&languages%5B" + variantlang.toString() + "%5D=" + lang.id
+                            variantlang++
                         }
                     }
                 }
