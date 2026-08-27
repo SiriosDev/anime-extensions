@@ -150,10 +150,27 @@ class HentaiSaturn :
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
         val alterTitle = formatTitle(
-            document.selectFirst("p.mt-1")?.text().orEmpty(),
+            document.selectFirst("div.text-center > p.mt-1")?.text().orEmpty(),
         ).replace("(ITA)", "").trim()
-        anime.description = document.selectFirst("section:has(h2) div")?.text()?.trim().orEmpty()
-        if (!anime.title.contains(alterTitle, true) && !alterTitle.isEmpty()) anime.description = anime.description + "\n\nTitolo Alternativo: " + alterTitle
+        val descritpionText = document.selectFirst("section:has(h2) div")?.text()?.trim().orEmpty()
+        val typeText = document.selectXpath("//dt[text()=\"Tipo\"]/following-sibling::dd").text().trim()
+        val releaseText = document.selectXpath("//dt[text()=\"Uscita\"]/following-sibling::dd").text().trim()
+        val langText = document.selectXpath("//dt[text()=\"Lingua\"]/following-sibling::dd").text().trim()
+        val durationText = document.selectXpath("//dt[text()=\"Durata\"]/following-sibling::dd").text().trim()
+        val viewsText = document.selectXpath("//dt[text()=\"Visualizzazioni\"]/following-sibling::dd").text().trim()
+        val voteText = document.selectXpath("//dt[text()=\"Voto\"]/following-sibling::dd").text().trim().split(" ")[0]
+        val voteCountText = document.selectXpath("//dt[text()=\"Voto\"]/following-sibling::dd").text().trim().split(" ")[1]
+
+        anime.description = buildString {
+            if (!anime.title.contains(alterTitle, true) && !alterTitle.isEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
+            if (!langText.isEmpty()) append("Lingua: ${langText}\n\n")
+            if (!descritpionText.isEmpty()) append("Descrizione: ${descritpionText}\n\n")
+            if (!typeText.isEmpty()) append("Tipo: ${typeText}\n\n")
+            if (!releaseText.isEmpty()) append("Uscita: ${releaseText}\n\n")
+            if (!durationText.isEmpty()) append("Durata Media: ${durationText}\n\n")
+            if (!viewsText.isEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
+            if (!voteText.isEmpty()) append("Voto: ★$voteText/10 ${voteCountText}\n\n")
+        }
         return anime
     }
 
@@ -263,7 +280,7 @@ class HentaiSaturn :
     )
 
     internal class Lang(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua Doppiaggio", langs)
+    private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua", langs)
     private fun getLangs() = listOf(
         Lang("jp", "Giapponese"),
         Lang("it", "Italiano"),
