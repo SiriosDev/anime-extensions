@@ -263,7 +263,7 @@ class HentaiSaturn :
     )
 
     internal class Lang(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua", langs)
+    private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua Doppiaggio", langs)
     private fun getLangs() = listOf(
         Lang("jp", "Giapponese"),
         Lang("it", "Italiano"),
@@ -272,12 +272,20 @@ class HentaiSaturn :
         Lang("ch", "Cinese"),
     )
 
+    internal class Subs(val id: String, name: String) : AnimeFilter.CheckBox(name)
+    private class SubsList(subs: List<Subs>) : AnimeFilter.Group<Subs>("Sottotitoli", subs)
+    private fun getSubs() = listOf(
+        Subs("0", "Sottotitolato"),
+        Subs("1", "Doppiato"),
+    )
+
     override fun getFilterList(): AnimeFilterList = AnimeFilterList(
         GenreList(getGenres()),
         YearList(getYears()),
         StateList(getStates()),
         TypeList(getTypes()),
         LangList(getLangs()),
+        SubsList(getSubs()),
     )
 
     private fun getSearchParameters(filters: AnimeFilterList): String {
@@ -286,6 +294,7 @@ class HentaiSaturn :
         var variantstate = 0
         var varianttype = 0
         var variantyear = 0
+        var variantsub = 0
         filters.forEach { filter ->
             when (filter) {
                 is GenreList -> { // ---Genre
@@ -324,10 +333,11 @@ class HentaiSaturn :
                     }
                 }
 
-                is LangList -> { // ---Lang
-                    filter.state.forEach { lang ->
-                        if (lang.state) {
-                            totalstring = totalstring + "&languages%5B0%5D=" + lang.id
+                is SubsList -> { // ---Subs
+                    filter.state.forEach { subs ->
+                        if (subs.state) {
+                            totalstring = totalstring + "&subtitles%5B" + variantsub.toString() + "%5D=" + subs.id
+                            variantsub++
                         }
                     }
                 }
