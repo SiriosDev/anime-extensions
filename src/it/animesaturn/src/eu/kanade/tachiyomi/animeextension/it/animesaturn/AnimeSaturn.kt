@@ -171,61 +171,61 @@ class AnimeSaturn :
     override fun latestUpdatesNextPageSelector(): String = "a[rel=\"next\"]"
 
     // Filters
-    internal class Genre(val id: String) : AnimeFilter.CheckBox(id)
+    internal class Genre(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class GenreList(genres: List<Genre>) : AnimeFilter.Group<Genre>("Generi", genres)
     private fun getGenres() = listOf(
-        Genre("Arti Marziali"),
-        Genre("Avventura"),
-        Genre("Azione"),
-        Genre("Bambini"),
-        Genre("Commedia"),
-        Genre("Demenziale"),
-        Genre("Demoni"),
-        Genre("Drammatico"),
-        Genre("Ecchi"),
-        Genre("Fantasy"),
-        Genre("Gioco"),
-        Genre("Harem"),
-        Genre("Hentai"),
-        Genre("Horror"),
-        Genre("Isekai"),
-        Genre("Josei"),
-        Genre("Magia"),
-        Genre("Mecha"),
-        Genre("Militari"),
-        Genre("Mistero"),
-        Genre("Musicale"),
-        Genre("Parodia"),
-        Genre("Polizia"),
-        Genre("Psicologico"),
-        Genre("Romantico"),
-        Genre("Samurai"),
-        Genre("Sci-Fi"),
-        Genre("Scolastico"),
-        Genre("Seinen"),
-        Genre("Sentimentale"),
-        Genre("Shoujo Ai"),
-        Genre("Shoujo"),
-        Genre("Shounen Ai"),
-        Genre("Shounen"),
-        Genre("Slice of Life"),
-        Genre("Soprannaturale"),
-        Genre("Spazio"),
-        Genre("Sport"),
-        Genre("Storico"),
-        Genre("Superpoteri"),
-        Genre("Thriller"),
-        Genre("Vampiri"),
-        Genre("Veicoli"),
-        Genre("Yaoi"),
-        Genre("Yuri"),
+        Genre("3", "Arti Marziali"),
+        Genre("5", "Avanguardia"),
+        Genre("2", "Avventura"),
+        Genre("1", "Azione"),
+        Genre("47", "Bambini"),
+        Genre("4", "Commedia"),
+        Genre("6", "Demoni"),
+        Genre("7", "Drammatico"),
+        Genre("8", "Ecchi"),
+        Genre("9", "Fantasy"),
+        Genre("10", "Gioco"),
+        Genre("11", "Harem"),
+        Genre("43", "Hentai"),
+        Genre("13", "Horror"),
+        Genre("49", "Isekai"),
+        Genre("14", "Josei"),
+        Genre("16", "Magia"),
+        Genre("18", "Mecha"),
+        Genre("19", "Militari"),
+        Genre("21", "Mistero"),
+        Genre("20", "Musicale"),
+        Genre("22", "Parodia"),
+        Genre("23", "Polizia"),
+        Genre("24", "Psicologico"),
+        Genre("46", "Romantico"),
+        Genre("26", "Samurai"),
+        Genre("28", "Sci-Fi"),
+        Genre("27", "Scolastico"),
+        Genre("29", "Seinen"),
+        Genre("25", "Sentimentale"),
+        Genre("30", "Shoujo"),
+        Genre("31", "Shoujo Ai"),
+        Genre("32", "Shounen"),
+        Genre("33", "Shounen Ai"),
+        Genre("34", "Slice of Life"),
+        Genre("37", "Soprannaturale"),
+        Genre("35", "Spazio"),
+        Genre("36", "Sport"),
+        Genre("12", "Storico"),
+        Genre("38", "Superpoteri"),
+        Genre("39", "Thriller"),
+        Genre("40", "Vampiri"),
+        Genre("48", "Veicoli"),
+        Genre("41", "Yaoi"),
+        Genre("42", "Yuri")
     )
 
     internal class Year(val id: String) : AnimeFilter.CheckBox(id)
     private class YearList(years: List<Year>) : AnimeFilter.Group<Year>("Anno di Uscita", years)
     private fun getYears(): List<Year> {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-        return (1967..currentYear).map { Year(it.toString()) }
+        return (1960..currentYear).map { Year(it.toString()) }
     }
 
     internal class State(val id: String, name: String) : AnimeFilter.CheckBox(name)
@@ -240,8 +240,11 @@ class AnimeSaturn :
     internal class Lang(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua", langs)
     private fun getLangs() = listOf(
-        Lang("jp", "Subbato"),
-        Lang("it", "Doppiato"),
+        Lang("jp", "Giapponese"),
+        Lang("it", "Italiano"),
+        Lang("en", "Inglese"),
+        Lang("kr", "Coreano"),
+        Lang("ch", "Cinese"),
     )
 
     override fun getFilterList(): AnimeFilterList = AnimeFilterList(
@@ -256,6 +259,7 @@ class AnimeSaturn :
         var variantgenre = 0
         var variantstate = 0
         var variantyear = 0
+        var variantlang = 0
         filters.forEach { filter ->
             when (filter) {
                 is GenreList -> { // ---Genre
@@ -288,7 +292,8 @@ class AnimeSaturn :
                 is LangList -> { // ---Lang
                     filter.state.forEach { lang ->
                         if (lang.state) {
-                            totalstring = totalstring + "&languages%5B0%5D=" + lang.id
+                            totalstring = totalstring + "&languages%5B" + variantlang.toString() + "%5D=" + lang.id
+                            variantlang++
                         }
                     }
                 }
