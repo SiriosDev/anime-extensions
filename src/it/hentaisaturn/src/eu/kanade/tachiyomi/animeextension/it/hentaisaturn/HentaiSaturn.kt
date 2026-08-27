@@ -48,8 +48,6 @@ class HentaiSaturn :
 
     override fun popularAnimeRequest(page: Int): Request = GET("$baseUrl/ongoing/$page")
 
-    private fun formatTitle(titlestring: String): String = titlestring.replace("(ITA)", "Dub ITA")
-
     override fun popularAnimeFromElement(element: Element): SAnime = searchAnimeFromElement(element)
 
     override fun popularAnimeNextPageSelector(): String = "a[rel=\"next\"]"
@@ -128,7 +126,7 @@ class HentaiSaturn :
     override fun searchAnimeFromElement(element: Element): SAnime {
         val anime = SAnime.create()
         anime.setUrlWithoutDomain(element.attr("href"))
-        anime.title = formatTitle(element.selectFirst("h3")!!.text())
+        anime.title = element.selectFirst("h3")!!.text()
         anime.thumbnail_url = element.selectFirst("img")?.attr("src")
         return anime
     }
@@ -144,31 +142,30 @@ class HentaiSaturn :
 
     override fun animeDetailsParse(document: Document): SAnime {
         val anime = SAnime.create()
-        anime.title = formatTitle(document.selectFirst("h1")!!.text())
+        anime.title = document.selectFirst("h1")!!.text()
         anime.author = document.selectFirst("div a[href*=studios]")?.text()
         anime.status = parseStatus(document.selectFirst("div a[href*=states]")?.text().orEmpty())
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
-        val alterTitle = formatTitle(
-            document.selectFirst("div.text-center > p.mt-1")?.text().orEmpty(),
-        ).replace("(ITA)", "").trim()
-        val descritpionText = document.selectFirst("section:has(h2) div")?.text()?.trim().orEmpty()
+        val alterTitle = document.selectFirst("div.text-center > p.mt-1")?.text().orEmpty().replace(Regex("\\(\\w+\\)"), "").trim()
+        val descriptionText = document.selectFirst("section:has(h2) div")?.text()?.trim().orEmpty()
         val typeText = document.selectFirst("div:nth-of-type(1) > dd")?.text()?.trim().orEmpty()
         val releaseText = document.selectFirst("div:nth-of-type(5) > dd")?.text()?.trim().orEmpty()
         val langText = document.selectFirst("div:nth-of-type(3) > dd > a")?.text()?.trim().orEmpty()
         val durationText = document.selectFirst("div:nth-of-type(7) > dd")?.text()?.trim().orEmpty()
         val viewsText = document.selectFirst("div:nth-of-type(8) > dd")?.text()?.trim().orEmpty()
-        val voteText = document.selectFirst("div:nth-of-type(9) > dd")?.text()?.trim().orEmpty().split(" ")
+        val voteText = document.selectFirst("#hentai-score")?.text()?.trim().orEmpty()
+        val votersText = document.selectFirst("#hentai-votes")?.text()?.trim().orEmpty()
 
         anime.description = buildString {
-            if (!anime.title.contains(alterTitle, true) && !alterTitle.isEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
+            if (anime.title.lowercase() != alterTitle.lowercase() && !alterTitle.isEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
             if (!langText.isEmpty()) append("Lingua: ${langText}\n\n")
-            if (!descritpionText.isEmpty()) append("Descrizione: ${descritpionText}\n\n")
+            if (!descriptionText.isEmpty()) append("Descrizione: ${descriptionText}\n\n")
             if (!typeText.isEmpty()) append("Tipo: ${typeText}\n\n")
             if (!releaseText.isEmpty()) append("Uscita: ${releaseText}\n\n")
             if (!durationText.isEmpty()) append("Durata Media: ${durationText}\n\n")
             if (!viewsText.isEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
-            if (!voteText.isEmpty()) append("Voto: ★${voteText[0]}/10 ${voteText[1]}\n\n")
+            if (!voteText.isEmpty()) append("Voto: ★${voteText}/10 (${votersText})\n\n")
         }
         return anime
     }
