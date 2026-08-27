@@ -63,7 +63,7 @@ class HentaiSaturn :
 
     override fun episodeFromElement(element: Element): SEpisode {
         val episode = SEpisode.create()
-        episode.setUrlWithoutDomain(element.attr("href").replace("episode/", "anime/").replace("watch/", "stream/"))
+        episode.setUrlWithoutDomain(element.attr("href").replace("episode/", "hentai/").replace("watch/", "stream/"))
         val epText = element.attr("title")
         episode.episode_number = epText.substringAfter("Episodio ").toFloatOrNull() ?: 0f
         episode.name = epText
