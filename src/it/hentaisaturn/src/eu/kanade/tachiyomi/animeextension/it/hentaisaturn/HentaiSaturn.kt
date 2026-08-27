@@ -279,7 +279,25 @@ class HentaiSaturn :
         Subs("1", "Doppiato"),
     )
 
+    internal class Order(val id: String, name: String) : AnimeFilter.CheckBox(name) {
+        override fun toString(): String = name
+    }
+    private class OrderList(sorts: Array<Order>) : AnimeFilter.Select<Order>("Ordina per", sorts)
+    private fun getOrder() = arrayOf(
+        Order("standard", "Standard"),
+        Order("recent", "Ultime aggiunte"),
+        Order("az", "Lista A-Z"),
+        Order("za", "Lista Z-A"),
+        Order("oldest", "Più vecchi (anno)"),
+        Order("newest", "Più recenti (anno)"),
+        Order("most_viewed", "Più visti"),
+        Order("least_viewed", "Meno visti"),
+        Order("best_rated", "Meglio valutati"),
+        Order("worst_rated", "Peggio valutati"),
+    )
+
     override fun getFilterList(): AnimeFilterList = AnimeFilterList(
+        OrderList(getOrder()),
         GenreList(getGenres()),
         YearList(getYears()),
         StateList(getStates()),
@@ -350,6 +368,11 @@ class HentaiSaturn :
                             variantsub++
                         }
                     }
+                }
+
+                is OrderList -> { // ---Sorts
+                    val order = filter.values[filter.state]
+                    totalstring = totalstring + "&sort=" + order.id
                 }
 
                 else -> {}
