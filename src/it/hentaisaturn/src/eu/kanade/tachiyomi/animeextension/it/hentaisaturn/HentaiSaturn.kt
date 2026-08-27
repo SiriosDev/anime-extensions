@@ -70,15 +70,25 @@ class HentaiSaturn :
                 .replace("episode/", "hentai/")
                 .replace("watch/", "stream/"),
         )
-        val episodePage = client.newCall(GET(baseUrl + episode.url)).execute().asJsoup()
-        val tvEpisode = episodePage.head()
+        val fallbackName = element.attr("title")
+        episode.episode_number = fallbackName.substringAfter("Episodio ").toFloatOrNull() ?: 0f
+        episode.name = fallbackName
+
+        val episodeResponse = client.newCall(GET(baseUrl + episode.url)).execute()
+        if (!episodeResponse.isSuccessful) {
+            return episode
+        }
+
+        val tvEpisode = episodeResponse.asJsoup()
+            .head()
             .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
             ?.data()
-            .orEmpty().parseAs<TVEpisodeLD>()
+            ?.let { runCatching { it.parseAs<TVEpisodeLD>() }.getOrNull() }
+            ?: return episode
+
         if (tvEpisode.datePublished.isNotEmpty()) episode.date_upload = dateFormat.tryParse(tvEpisode.datePublished)
-        val epText = tvEpisode.name.substringAfter(tvEpisode.partOfSeries.name).trim()
         episode.episode_number = tvEpisode.episodeNumber
-        episode.name = epText
+        episode.name = tvEpisode.name.substringAfter(tvEpisode.partOfSeries.name).trim().ifEmpty { fallbackName }
         return episode
     }
 
