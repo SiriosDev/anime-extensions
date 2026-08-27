@@ -237,6 +237,16 @@ class AnimeSaturn :
         State("3", "Droppato"),
     )
 
+    internal class Type(val id: String, name: String) : AnimeFilter.CheckBox(name)
+    private class TypeList(types: List<Type>) : AnimeFilter.Group<Type>("Tipo", types)
+    private fun getTypes() = listOf(
+        Type("1", "TV"),
+        Type("2", "Movie"),
+        Type("3", "OVA"),
+        Type("4", "Special"),
+        Type("5", "ONA"),
+    )
+
     internal class Lang(val id: String, name: String) : AnimeFilter.CheckBox(name)
     private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua", langs)
     private fun getLangs() = listOf(
@@ -247,19 +257,42 @@ class AnimeSaturn :
         Lang("ch", "Cinese"),
     )
 
+    internal class Subs(val id: String, name: String) : AnimeFilter.CheckBox(name)
+    private class SubsList(subs: List<Subs>) : AnimeFilter.Group<Subs>("Sottotitoli", subs)
+    private fun getSubs() = listOf(
+        Subs("0", "Sottotitolato"),
+        Subs("1", "Doppiato"),
+    )
+
+    internal class ReleaseSeason(val id: String, name: String) : AnimeFilter.CheckBox(name)
+    private class ReleaseSeasonList(seasons: List<ReleaseSeason>) : AnimeFilter.Group<ReleaseSeason>("Stagione di Uscita", seasons)
+    private fun getReleaseSeasons() = listOf(
+        ReleaseSeason("spring", "Primavera"),
+        ReleaseSeason("summer", "Estate"),
+        ReleaseSeason("fall", "Autunno"),
+        ReleaseSeason("winter", "Inverno"),
+        ReleaseSeason("unknown", "Sconosciuta")
+    )
+
     override fun getFilterList(): AnimeFilterList = AnimeFilterList(
         GenreList(getGenres()),
         YearList(getYears()),
         StateList(getStates()),
+        ReleaseSeasonList(getReleaseSeasons()),
+        TypeList(getTypes()),
         LangList(getLangs()),
+        SubsList(getSubs()),
     )
 
     private fun getSearchParameters(filters: AnimeFilterList): String {
         var totalstring = ""
         var variantgenre = 0
         var variantstate = 0
+        var variantseason = 0
+        var varianttype = 0
         var variantyear = 0
         var variantlang = 0
+        var variantsubs = 0
         filters.forEach { filter ->
             when (filter) {
                 is GenreList -> { // ---Genre
@@ -289,11 +322,38 @@ class AnimeSaturn :
                     }
                 }
 
+                is TypeList -> { // ---Type
+                    filter.state.forEach { type ->
+                        if (type.state) {
+                            totalstring = totalstring + "&types%5B" + varianttype.toString() + "%5D=" + type.id
+                            varianttype++
+                        }
+                    }
+                }
+
                 is LangList -> { // ---Lang
                     filter.state.forEach { lang ->
                         if (lang.state) {
                             totalstring = totalstring + "&languages%5B" + variantlang.toString() + "%5D=" + lang.id
                             variantlang++
+                        }
+                    }
+                }
+
+                is SubsList -> { // ---Subs
+                    filter.state.forEach { subs ->
+                        if (subs.state) {
+                            totalstring = totalstring + "&subtitles%5B" + variantsubs.toString() + "%5D=" + subs.id
+                            variantsubs++
+                        }
+                    }
+                }
+
+                is ReleaseSeasonList -> { // ---Release Season
+                    filter.state.forEach { season ->
+                        if (season.state) {
+                            totalstring = totalstring + "&release_seasons%5B" + variantseason.toString() + "%5D=" + season.id
+                            variantseason++
                         }
                     }
                 }
