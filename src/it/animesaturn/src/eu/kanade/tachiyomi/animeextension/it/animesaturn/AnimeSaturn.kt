@@ -202,7 +202,7 @@ class AnimeSaturn :
             if (releaseDateText.isNotEmpty()) append("Uscita: $releaseSeasonText - ${releaseDateText}\n\n")
             if (durationText.isNotEmpty()) append("Durata Media: ${durationText}\n\n")
             if (viewsText.isNotEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
-            if (voteText.isNotEmpty()) append("Voto: ★${voteText[0]}/10 ($votersText)\n\n")
+            if (voteText.isNotEmpty()) append("Voto: ★${voteText}/10 ($votersText)\n\n")
         }
         return anime
     }
