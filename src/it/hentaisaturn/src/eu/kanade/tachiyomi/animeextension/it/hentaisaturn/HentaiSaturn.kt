@@ -16,12 +16,15 @@ import keiyoushi.utils.addListPreference
 import keiyoushi.utils.delegate
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
+import keiyoushi.utils.tryParse
 import kotlinx.serialization.Serializable
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 import kotlin.io.encoding.Base64
 
 class HentaiSaturn :
@@ -62,12 +65,36 @@ class HentaiSaturn :
 
     override fun episodeFromElement(element: Element): SEpisode {
         val episode = SEpisode.create()
-        episode.setUrlWithoutDomain(element.attr("href").replace("episode/", "hentai/").replace("watch/", "stream/"))
-        val epText = element.attr("title")
-        episode.episode_number = epText.substringAfter("Episodio ").toFloatOrNull() ?: 0f
+        episode.setUrlWithoutDomain(element.attr("href")
+            .replace("episode/", "hentai/")
+            .replace("watch/", "stream/")
+        )
+        val episodePage = client.newCall(GET(baseUrl + episode.url)).execute().asJsoup()
+        val tvEpisode = episodePage.head()
+            .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
+            ?.data()
+            .orEmpty().parseAs<TVEpisodeLD>()
+        if (tvEpisode.datePublished.isNotEmpty()) episode.date_upload = dateFormat.tryParse(tvEpisode.datePublished)
+        val epText = tvEpisode.name.substringAfter(tvEpisode.partOfSeries.name).trim().orEmpty()
+        episode.episode_number = tvEpisode.episodeNumber
         episode.name = epText
         return episode
     }
+
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
+
+    @Serializable
+    internal class TVEpisodeLD(
+        val name: String,
+        val episodeNumber: Float,
+        val datePublished: String,
+        val partOfSeries: TVSeriesLD,
+    )
+
+    @Serializable
+    internal class TVSeriesLD(
+        val name: String,
+    )
 
     private val playlistUtils by lazy { PlaylistUtils(client, headers) }
 
