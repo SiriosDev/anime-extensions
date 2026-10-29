@@ -408,5 +408,5 @@ abstract class HentaiSaturn :
     }
 
     @Serializable
-    data class PlaylistModel(val d: String, val p: String, val t: String)
+    class PlaylistModel(val d: String)
 }
