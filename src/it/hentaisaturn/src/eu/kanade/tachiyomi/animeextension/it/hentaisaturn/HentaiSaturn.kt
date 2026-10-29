@@ -19,6 +19,7 @@ import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParse
 import kotlinx.serialization.Serializable
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
@@ -39,7 +40,7 @@ abstract class HentaiSaturn :
 
     override fun popularAnimeSelector(): String = "a.group[href]:not(.flex)"
 
-    override fun popularAnimeRequest(page: Int): Request = GET("$baseUrl/ongoing/$page")
+    override fun popularAnimeRequest(page: Int): Request = GET("$baseUrl/ongoing/$page", headers)
 
     override fun popularAnimeFromElement(element: Element): SAnime = searchAnimeFromElement(element)
 
@@ -148,7 +149,7 @@ abstract class HentaiSaturn :
     }
 
     override fun videoListRequest(episode: SEpisode): Request {
-        val episodePage = client.newCall(GET(baseUrl + episode.url)).execute().asJsoup()
+        val episodePage = client.newCall(GET(baseUrl + episode.url, headers)).execute().asJsoup()
         val url = episodePage.selectFirst("iframe")!!.attr("src")
         return Request.Builder()
             .url(url.replace("?", "/playlist?"))
@@ -182,7 +183,10 @@ abstract class HentaiSaturn :
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
         val parameters = getSearchParameters(filters)
-        return GET("$baseUrl/filter/$page?key=$query$parameters")
+        val url = "$baseUrl/filter/$page".toHttpUrl().newBuilder()
+            .addQueryParameter("key", query)
+            .build()
+        return GET(url.toString() + parameters, headers)
     }
 
     override fun animeDetailsParse(document: Document): SAnime {
@@ -233,7 +237,7 @@ abstract class HentaiSaturn :
     override fun latestUpdatesSelector(): String = "a.group[href]:not(.flex)"
 
     override fun latestUpdatesFromElement(element: Element): SAnime = searchAnimeFromElement(element)
-    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/newest/$page")
+    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/newest/$page", headers)
 
     override fun latestUpdatesNextPageSelector(): String = "a[rel=\"next\"]"
 
