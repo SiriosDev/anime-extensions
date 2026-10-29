@@ -10,6 +10,7 @@ import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.annotation.Source
 import keiyoushi.utils.ParsedAnimeHttpLegacySource
@@ -44,6 +45,14 @@ abstract class HentaiSaturn :
 
     override fun popularAnimeNextPageSelector(): String = "a[rel=\"next\"]"
 
+    override suspend fun getEpisodeList(anime: SAnime): List<SEpisode> {
+        val episodes = client.newCall(episodeListRequest(anime))
+            .awaitSuccess()
+            .use(::episodeListParse)
+
+        return episodes.map { enrichEpisode(it) }
+    }
+
     override fun episodeListParse(response: Response): List<SEpisode> {
         val document = response.asJsoup()
         return document.select(episodeListSelector()).map { episodeFromElement(it) }.reversed()
@@ -62,32 +71,32 @@ abstract class HentaiSaturn :
         episode.episode_number = fallbackName.substringAfter("Episodio ").toFloatOrNull() ?: 0f
         episode.name = fallbackName
 
-        val episodeResponse = client.newCall(GET(baseUrl + episode.url)).execute()
-        if (!episodeResponse.isSuccessful) {
-            episodeResponse.close()
-            return episode
-        }
+        return episode
+    }
 
-        val tvEpisode = episodeResponse.asJsoup()
-            .head()
-            .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
-            ?.data()
-            ?.let { runCatching { it.parseAs<TVEpisodeLD>() }.getOrNull() }
-        episodeResponse.close()
+    private suspend fun enrichEpisode(episode: SEpisode): SEpisode {
+        client.newCall(GET(baseUrl + episode.url, headers))
+            .awaitSuccess()
+            .use { response ->
+                val tvEpisode = response.asJsoup()
+                    .head()
+                    .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
+                    ?.data()
+                    ?.let { runCatching { it.parseAs<TVEpisodeLD>() }.getOrNull() }
+                    ?: return episode
 
-        if (tvEpisode == null) return episode
+                tvEpisode.datePublished
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { episode.date_upload = dateFormat.tryParse(it) }
 
-        tvEpisode.datePublished
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { episode.date_upload = dateFormat.tryParse(it) }
+                tvEpisode.episodeNumber?.let { episode.episode_number = it }
 
-        tvEpisode.episodeNumber?.let { episode.episode_number = it }
-
-        val seriesName = tvEpisode.partOfSeries?.name
-        episode.name = tvEpisode.name
-            ?.let { name -> seriesName?.let { name.substringAfter(it).trim() } ?: name }
-            ?.ifEmpty { fallbackName }
-            ?: fallbackName
+                val seriesName = tvEpisode.partOfSeries?.name
+                episode.name = tvEpisode.name
+                    ?.let { name -> seriesName?.let { name.substringAfter(it).trim() } ?: name }
+                    ?.ifEmpty { episode.name }
+                    ?: episode.name
+            }
 
         return episode
     }
