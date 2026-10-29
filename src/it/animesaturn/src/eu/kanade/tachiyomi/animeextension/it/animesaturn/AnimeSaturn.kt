@@ -9,11 +9,11 @@ import eu.kanade.tachiyomi.animesource.model.AnimeUpdateStrategy
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
+import keiyoushi.utils.ParsedAnimeHttpLegacySource
 import keiyoushi.utils.addListPreference
-import keiyoushi.utils.delegate
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParse
@@ -27,26 +27,14 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.io.encoding.Base64
 
-class AnimeSaturn :
-    ParsedAnimeHttpSource(),
+@Source
+abstract class AnimeSaturn :
+    ParsedAnimeHttpLegacySource(),
     ConfigurableAnimeSource {
-
-    override val name = "AnimeSaturn"
-
-    override val lang = "it"
 
     override val supportsLatest = true
 
-    private val preferences by getPreferencesLazy {
-        val currentDomain = getString(PREF_DOMAIN, DOMAIN_DEFAULT)!!
-        if (currentDomain !in DOMAIN_VALUES) {
-            edit()
-                .putString(PREF_DOMAIN, DOMAIN_DEFAULT)
-                .apply()
-        }
-    }
-
-    override val baseUrl by preferences.delegate(PREF_DOMAIN, DOMAIN_DEFAULT)
+    private val preferences by getPreferencesLazy()
 
     override fun popularAnimeSelector(): String = "a.group[href]:not(.flex)"
 
@@ -164,15 +152,13 @@ class AnimeSaturn :
 
     override fun videoFromElement(element: Element) = throw UnsupportedOperationException()
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val prQuality = preferences.getString(PREF_QUALITY, QUALITY_DEFAULT)!!
 
         return sortedWith(
-            compareByDescending { it.quality.contains(prQuality) },
+            compareByDescending { it.videoTitle.contains(prQuality) },
         )
     }
-
-    override fun videoUrlParse(document: Document) = throw UnsupportedOperationException()
 
     override fun searchAnimeFromElement(element: Element): SAnime {
         val anime = SAnime.create()
@@ -479,15 +465,6 @@ class AnimeSaturn :
             default = QUALITY_DEFAULT,
             summary = "%s",
         )
-
-        screen.addListPreference(
-            key = PREF_DOMAIN,
-            title = "Dominio in Uso (Riavvio dell'App Richiesto)",
-            entries = DOMAIN_ENTRIES,
-            entryValues = DOMAIN_VALUES,
-            default = DOMAIN_DEFAULT,
-            summary = "%s",
-        )
     }
 
     companion object {
@@ -495,11 +472,6 @@ class AnimeSaturn :
         private val QUALITY_VALUES = listOf("1080", "720", "480", "360", "240", "144")
         private val QUALITY_ENTRIES = QUALITY_VALUES.map { "${it}p" }
         private val QUALITY_DEFAULT = QUALITY_VALUES.first()
-
-        private const val PREF_DOMAIN = "preferred_domain"
-        private val DOMAIN_ENTRIES = listOf("animesaturn.net", "animemars.org", "animesaturn.cx", "animesaturn.cc", "animesaturn.com")
-        private val DOMAIN_VALUES = DOMAIN_ENTRIES.map { "https://$it" }
-        private val DOMAIN_DEFAULT = DOMAIN_VALUES.first()
     }
 
     @Serializable

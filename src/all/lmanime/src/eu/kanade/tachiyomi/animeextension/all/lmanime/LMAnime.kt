@@ -7,6 +7,7 @@ import aniyomi.lib.mp4uploadextractor.Mp4uploadExtractor
 import aniyomi.lib.streamwishextractor.StreamWishExtractor
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.animestream.AnimeStream
+import keiyoushi.annotation.Source
 import keiyoushi.utils.addListPreference
 import keiyoushi.utils.addSetPreference
 import keiyoushi.utils.delegate
@@ -14,12 +15,8 @@ import keiyoushi.utils.parallelCatchingFlatMapBlocking
 import keiyoushi.utils.useAsJsoup
 import okhttp3.Response
 
-class LMAnime :
-    AnimeStream(
-        "all",
-        "LMAnime",
-        "https://lmanime.com",
-    ) {
+@Source
+abstract class LMAnime : AnimeStream() {
     // ============================ Video Links =============================
     override val prefQualityValues = listOf("144p", "288p", "480p", "720p", "1080p")
 
@@ -79,13 +76,13 @@ class LMAnime :
     private val SharedPreferences.allowedLangsPref by preferences.delegate(PREF_ALLOWED_LANGS_KEY, PREF_ALLOWED_LANGS_DEFAULT)
 
     // ============================= Utilities ==============================
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.videoSortPref
         val lang = preferences.langPref
         return sortedWith(
             compareBy(
-                { it.quality.contains(quality) },
-                { it.quality.contains(lang, true) },
+                { it.videoTitle.contains(quality) },
+                { it.videoTitle.contains(lang, true) },
             ),
         ).reversed()
     }

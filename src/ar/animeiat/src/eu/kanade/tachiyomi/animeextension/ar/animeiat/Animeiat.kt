@@ -16,25 +16,24 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
+import keiyoushi.annotation.Source
+import keiyoushi.utils.AnimeHttpLegacySource
 import keiyoushi.utils.getPreferencesLazy
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
 import java.util.Base64
 
-class Animeiat :
-    AnimeHttpSource(),
+@Source
+abstract class Animeiat :
+    AnimeHttpLegacySource(),
     ConfigurableAnimeSource {
 
-    override val name = "Animeiat"
-
-    override val baseUrl = "https://api.animeiat.co/v1"
-
-    override val lang = "ar"
-
     override val supportsLatest = true
+
+    private val storageUrl: String get() = baseUrl.toHttpUrl().run { "$scheme://$host/storage" }
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -49,7 +48,7 @@ class Animeiat :
             SAnime.create().apply {
                 url = "/anime/${it.slug}"
                 title = it.anime_name
-                thumbnail_url = "https://api.animeiat.co/storage/${it.poster_path}"
+                thumbnail_url = "$storageUrl/${it.poster_path}"
             }
         }
         val hasNextPage = responseJson.meta.current_page < responseJson.meta.last_page
@@ -100,10 +99,10 @@ class Animeiat :
         }
     }
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(PREF_QUALITY_KEY, PREF_QUALITY_DEFAULT)!!
         return sortedWith(
-            compareBy { it.quality.contains(quality) },
+            compareBy { it.videoTitle.contains(quality) },
         ).reversed()
     }
 
@@ -121,7 +120,7 @@ class Animeiat :
             author = details.studios.joinToString { it.name }
             genre = details.genres.joinToString { it.name }
             description = details.story
-            thumbnail_url = "https://api.animeiat.co/storage/${details.poster_path}"
+            thumbnail_url = "$storageUrl/${details.poster_path}"
         }
         return anime
     }
@@ -161,7 +160,7 @@ class Animeiat :
             SAnime.create().apply {
                 url = "/anime/${it.slug.substringBefore("-episode-")}"
                 title = it.title
-                thumbnail_url = "https://api.animeiat.co/storage/${it.poster_path}"
+                thumbnail_url = "$storageUrl/${it.poster_path}"
             }
         }
         val hasNextPage = responseJson.meta.current_page < responseJson.meta.last_page

@@ -16,6 +16,7 @@ import eu.kanade.tachiyomi.multisrc.dooplay.DooPlay
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
+import keiyoushi.annotation.Source
 import keiyoushi.utils.bodyString
 import keiyoushi.utils.catchingFlatMapBlocking
 import keiyoushi.utils.flatMapCatching
@@ -29,12 +30,8 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.text.Normalizer
 
-class VerPelisTop :
-    DooPlay(
-        "es",
-        "VerPelisTop",
-        "https://www1.verpelis.top",
-    ) {
+@Source
+abstract class VerPelisTop : DooPlay() {
 
     // ============================== Popular ===============================
     override fun popularAnimeRequest(page: Int) = GET(baseUrl)
@@ -229,15 +226,15 @@ class VerPelisTop :
         return normalized.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
     }
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(prefQualityKey, prefQualityDefault)!!
         val lang = preferences.getString(PREF_LANG_KEY, PREF_LANG_DEFAULT)!!
         val server = preferences.getString(PREF_SERVER_KEY, PREF_SERVER_DEFAULT)!!
         return sortedWith(
             compareBy(
-                { it.quality.contains(lang, true) },
-                { it.quality.contains(server, true) },
-                { it.quality.contains(quality) },
+                { it.videoTitle.contains(lang, true) },
+                { it.videoTitle.contains(server, true) },
+                { it.videoTitle.contains(quality) },
             ),
         ).reversed()
     }

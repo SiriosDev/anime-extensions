@@ -9,11 +9,12 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
+import keiyoushi.utils.AnimeHttpLegacySource
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.toJsonRequestBody
@@ -26,16 +27,13 @@ import okhttp3.Response
 import uy.kohesive.injekt.injectLazy
 import java.text.SimpleDateFormat
 
-class AnimeUnity :
-    AnimeHttpSource(),
+@Source
+abstract class AnimeUnity :
+    AnimeHttpLegacySource(),
     ConfigurableAnimeSource {
-    override val name = "AnimeUnity"
 
     // TODO: Check frequency of url changes to potentially
     // add back overridable baseurl preference
-    override val baseUrl = "https://www.animeunity.so"
-
-    override val lang = "it"
 
     override val supportsLatest = true
 
@@ -467,14 +465,14 @@ class AnimeUnity :
         return System.currentTimeMillis()
     }
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(PREF_QUALITY_KEY, PREF_QUALITY_DEFAULT)!!
 
         return this
             .sortedWith(
                 compareBy(
-                    { it.quality.contains(quality) },
-                    { it.quality.substringBefore("p").toIntOrNull() ?: 0 },
+                    { it.videoTitle.contains(quality) },
+                    { it.videoTitle.substringBefore("p").toIntOrNull() ?: 0 },
                 ),
             ).reversed()
     }

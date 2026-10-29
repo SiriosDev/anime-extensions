@@ -16,18 +16,14 @@ import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.datalifeengine.DataLifeEngine
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
 import keiyoushi.utils.parallelCatchingFlatMap
 import okhttp3.Request
 import okhttp3.Response
-import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
-class FrenchAnime :
-    DataLifeEngine(
-        "French Anime",
-        "https://french-anime.com",
-        "fr",
-    ) {
+@Source
+abstract class FrenchAnime : DataLifeEngine() {
 
     override val categories = arrayOf(
         Pair("<Sélectionner>", ""),
@@ -139,6 +135,4 @@ class FrenchAnime :
     override fun videoFromElement(element: Element): Video = throw UnsupportedOperationException()
 
     override fun videoListSelector(): String = throw UnsupportedOperationException()
-
-    override fun videoUrlParse(document: Document): String = throw UnsupportedOperationException()
 }

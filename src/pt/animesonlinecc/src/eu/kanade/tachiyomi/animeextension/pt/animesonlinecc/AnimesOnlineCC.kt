@@ -7,18 +7,15 @@ import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.dooplay.DooPlay
 import eu.kanade.tachiyomi.network.GET
+import keiyoushi.annotation.Source
 import keiyoushi.utils.parallelCatchingFlatMapBlocking
 import keiyoushi.utils.useAsJsoup
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
-class AnimesOnlineCC :
-    DooPlay(
-        "pt-BR",
-        "Animes Online CC",
-        "https://animesonlinecc.to",
-    ) {
+@Source
+abstract class AnimesOnlineCC : DooPlay() {
 
     // ============================== Popular ===============================
     override fun popularAnimeSelector() = "article.w_item_b > a"
@@ -107,14 +104,14 @@ class AnimesOnlineCC :
     // ============================= Utilities ==============================
     override val animeMenuSelector = "div.pag_episodes div.item a[href] i.icon-bars"
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(videoSortPrefKey, videoSortPrefDefault)!!
         val language = preferences.getString(PREF_LANGUAGE_KEY, PREF_LANGUAGE_DEFAULT)!!
         return sortedWith(
             compareBy(
-                { it.quality.lowercase().contains(language.lowercase()) },
-                { it.quality.lowercase().contains(quality.lowercase()) },
-                { REGEX_QUALITY.find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
+                { it.videoTitle.lowercase().contains(language.lowercase()) },
+                { it.videoTitle.lowercase().contains(quality.lowercase()) },
+                { REGEX_QUALITY.find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
             ),
         ).reversed()
     }

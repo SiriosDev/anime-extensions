@@ -9,16 +9,13 @@ import eu.kanade.tachiyomi.animeextension.en.animenosub.extractors.VtubeExtracto
 import eu.kanade.tachiyomi.animeextension.en.animenosub.extractors.WolfstreamExtractor
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.animestream.AnimeStream
+import keiyoushi.annotation.Source
 import keiyoushi.utils.addListPreference
 import keiyoushi.utils.delegate
 import org.jsoup.nodes.Element
 
-class Animenosub :
-    AnimeStream(
-        "en",
-        "Animenosub",
-        "https://animenosub.to",
-    ) {
+@Source
+abstract class Animenosub : AnimeStream() {
     // ============================== Episodes ==============================
     override fun getEpisodeName(element: Element, epNum: String): String = element.selectFirst("div.epl-title")?.text()
         ?.takeIf { !it.contains("Episode $epNum", true) }
@@ -94,15 +91,15 @@ class Animenosub :
     private val SharedPreferences.typePref by preferences.delegate(PREF_TYPE_KEY, PREF_TYPE_DEFAULT)
     private val SharedPreferences.serverPref by preferences.delegate(PREF_SERVER_KEY, PREF_SERVER_DEFAULT)
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.videoSortPref
         val type = preferences.typePref
         val server = preferences.serverPref
         return sortedWith(
             compareBy(
-                { it.quality.contains(type, ignoreCase = true) },
-                { it.quality.contains(quality, ignoreCase = true) },
-                { it.quality.contains(server, ignoreCase = true) },
+                { it.videoTitle.contains(type, ignoreCase = true) },
+                { it.videoTitle.contains(quality, ignoreCase = true) },
+                { it.videoTitle.contains(server, ignoreCase = true) },
             ),
         ).reversed()
     }

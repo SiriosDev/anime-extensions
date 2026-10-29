@@ -9,11 +9,12 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
+import keiyoushi.utils.ParsedAnimeHttpLegacySource
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parallelCatchingFlatMapBlocking
 import keiyoushi.utils.useAsJsoup
@@ -23,17 +24,12 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 
-class EnNovelas :
-    ParsedAnimeHttpSource(),
+@Source
+abstract class EnNovelas :
+    ParsedAnimeHttpLegacySource(),
     ConfigurableAnimeSource {
-
-    override val name = "EnNovelas"
-
-    override val baseUrl = "https://l.ennovelas-tv.com"
-
-    override val lang = "es"
 
     override val supportsLatest = false
 
@@ -78,9 +74,9 @@ class EnNovelas :
                         .build()
                     val season = getNumberFromEpsString(it.text())
                     val tmpClient = client.newBuilder()
-                        .connectTimeout(30, TimeUnit.SECONDS)
-                        .writeTimeout(35, TimeUnit.SECONDS)
-                        .readTimeout(35, TimeUnit.SECONDS)
+                        .connectTimeout(30.seconds)
+                        .writeTimeout(35.seconds)
+                        .readTimeout(35.seconds)
                         .build()
                     tmpClient.newCall(GET("$baseUrl/wp-content/themes/vo2022/temp/ajax/seasons.php?seriesID=${it.attr("data-season")}", headers = headers))
                         .execute().useAsJsoup().select(".block-post").forEach { element ->
@@ -163,17 +159,15 @@ class EnNovelas :
 
     override fun videoListSelector() = throw UnsupportedOperationException()
 
-    override fun videoUrlParse(document: Document) = throw UnsupportedOperationException()
-
     override fun videoFromElement(element: Element) = throw UnsupportedOperationException()
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString("preferred_quality", "Voex")
         if (quality != null) {
             val newList = mutableListOf<Video>()
             var preferred = 0
             for (video in this) {
-                if (video.quality == quality) {
+                if (video.videoTitle == quality) {
                     newList.add(preferred, video)
                     preferred++
                 } else {
