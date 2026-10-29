@@ -19,6 +19,7 @@ import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.dopeflix.DopeFlix
 import eu.kanade.tachiyomi.network.GET
+import keiyoushi.annotation.Source
 import keiyoushi.utils.bodyString
 import keiyoushi.utils.parallelCatchingFlatMapBlocking
 import keiyoushi.utils.parseAs
@@ -41,16 +42,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-class LaMovie :
-    DopeFlix(
-        "LaMovie",
-        "es",
-        BuildConfig.MEGACLOUD_API,
-        listOf(
-            "la.movie",
-        ),
-    ) {
-    override val id: Long = 5419283741928374105
+@Source
+abstract class LaMovie : DopeFlix(BuildConfig.MEGACLOUD_API) {
 
     private val doodExtractor by lazy { DoodExtractor(client) }
     private val voeExtractor by lazy { VoeExtractor(client, headers) }
@@ -232,7 +225,7 @@ class LaMovie :
         }
     }
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val preferredQuality = preferences.getString(PREF_QUALITY_KEY, PREF_QUALITY_DEFAULT) ?: PREF_QUALITY_DEFAULT
         val preferredQualityLower = preferredQuality.lowercase(Locale.US)
         val preferredQualityValue = QUALITY_REGEX.find(preferredQualityLower)?.groupValues?.get(1)?.toIntOrNull()
@@ -247,7 +240,7 @@ class LaMovie :
         )
 
         fun Video.matchesPreferredQuality(): Boolean {
-            val normalized = quality.lowercase(Locale.US)
+            val normalized = videoTitle.lowercase(Locale.US)
             if (normalized.contains(preferredQualityLower)) return true
 
             val numericQuality = QUALITY_REGEX.find(normalized)?.groupValues?.get(1)?.toIntOrNull()
@@ -258,7 +251,7 @@ class LaMovie :
         }
 
         fun Video.extractQualityValue(): Int {
-            val normalized = quality.lowercase(Locale.US)
+            val normalized = videoTitle.lowercase(Locale.US)
             val numericQuality = QUALITY_REGEX.find(normalized)?.groupValues?.get(1)?.toIntOrNull()
             if (numericQuality != null) return numericQuality
 
@@ -311,14 +304,14 @@ class LaMovie :
         return serverKey() == preferredKey
     }
 
-    private fun Video.serverKey(): String = detectServer(quality, url)
+    private fun Video.serverKey(): String = detectServer(videoTitle, videoUrl)
 
     private fun Video.matchesLanguage(preferredKey: String): Boolean {
         if (preferredKey == PREF_LANGUAGE_DEFAULT) return false
         return languageCode() == preferredKey
     }
 
-    private fun Video.languageCode(): String = detectLanguage(quality, url)
+    private fun Video.languageCode(): String = detectLanguage(videoTitle, videoUrl)
 
     private fun detectServer(vararg texts: String?): String {
         if (texts.isEmpty()) return SERVER_KEY_UNKNOWN

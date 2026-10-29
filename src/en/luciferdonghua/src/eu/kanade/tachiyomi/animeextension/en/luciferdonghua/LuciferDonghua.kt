@@ -8,20 +8,17 @@ import aniyomi.lib.rumbleextractor.RumbleExtractor
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.animestream.AnimeStream
+import keiyoushi.annotation.Source
 import keiyoushi.utils.addSetPreference
 import keiyoushi.utils.addSwitchPreference
 import keiyoushi.utils.delegate
 import okhttp3.Response
 
-class LuciferDonghua :
-    AnimeStream(
-        "en",
-        "LuciferDonghua",
-        "https://luciferdonghua.in",
-    ) {
+@Source
+abstract class LuciferDonghua : AnimeStream() {
 
     // ============================== Preferences ==============================
-    override val prefQualityValues = listOf("2160p", "1440p", "1080p", "720p", "480p", "360p")
+    override val prefQualityValues = listOf("2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p")
     // override val prefQualityEntries = prefQualityValues
 
     private val SharedPreferences.ignorePreview
@@ -94,12 +91,12 @@ class LuciferDonghua :
     }
 
     // ============================= Utilities ==============================
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.videoSortPref
         return sortedWith(
             compareBy(
-                { it.quality.contains(quality) },
-                { Regex("""(\d+)p""").find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
+                { it.videoTitle.contains(quality) },
+                { Regex("""(\d+)p""").find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
             ),
         ).reversed()
     }

@@ -10,18 +10,15 @@ import eu.kanade.tachiyomi.multisrc.dooplay.DooPlay
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
 import keiyoushi.utils.parallelFlatMapBlocking
 import okhttp3.FormBody
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Element
 
-class PinoyMoviePedia :
-    DooPlay(
-        "en",
-        "PinoyMoviePedia",
-        "https://pinoymoviepedia.ru",
-    ) {
+@Source
+abstract class PinoyMoviePedia : DooPlay() {
     override val supportsLatest = false
 
     // ============================== Popular ===============================
@@ -133,14 +130,14 @@ class PinoyMoviePedia :
     // ============================= Utilities ==============================
     override fun String.toDate() = 0L
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(prefQualityKey, prefQualityDefault)!!
         val server = preferences.getString(PREF_SERVER_KEY, PREF_SERVER_DEFAULT)!!
         return sortedWith(
             compareBy(
-                { it.quality.contains(lang) },
-                { it.quality.contains(server, true) },
-                { it.quality.contains(quality) },
+                { it.videoTitle.contains(lang) },
+                { it.videoTitle.contains(server, true) },
+                { it.videoTitle.contains(quality) },
             ),
         ).reversed()
     }

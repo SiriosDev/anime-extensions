@@ -21,9 +21,10 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
+import keiyoushi.annotation.Source
+import keiyoushi.utils.AnimeHttpLegacySource
 import keiyoushi.utils.LazyMutable
 import keiyoushi.utils.addEditTextPreference
 import keiyoushi.utils.bodyString
@@ -42,8 +43,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 
-class AnimeSama :
-    AnimeHttpSource(),
+@Source
+abstract class AnimeSama :
+    AnimeHttpLegacySource(),
     ConfigurableAnimeSource {
 
     override val name = "Anime-Sama"
@@ -132,7 +134,7 @@ class AnimeSama :
     override suspend fun getSearchAnime(page: Int, query: String, filters: AnimeFilterList): AnimesPage {
         if (query.startsWith("https://")) {
             val url = query.toHttpUrl()
-            if (url.host != baseUrl.toHttpUrl().host) {
+            if (url.host != baseUrl.toHttpUrl().host && url.host !in KNOWN_HOSTS) {
                 throw Exception("Unsupported url")
             }
             val id = url.pathSegments.getOrNull(1)
@@ -140,7 +142,7 @@ class AnimeSama :
             return getSearchAnime(page, "$PREFIX_SEARCH$id", filters)
         } else if (query.startsWith(PREFIX_SEARCH)) {
             val id = query.removePrefix(PREFIX_SEARCH)
-            val animeUrl = if (id.startsWith("/")) "$baseUrl$id" else "$baseUrl/$id"
+            val animeUrl = if (id.startsWith("/")) "$baseUrl$id" else "$baseUrl/catalogue/$id/"
             val seasons = fetchAnimeSeasons(animeUrl, "")
             return AnimesPage(seasons, false)
         }
@@ -275,7 +277,7 @@ class AnimeSama :
             // the url-aware dedupe below cannot collapse. Restricted to those hosts: other
             // players can return distinct files under one label, and must not lose them.
             val dedupedVids = if (VIDHIDE_DOMAINS.any { playerUrl.contains(it, ignoreCase = true) }) {
-                vids.distinctBy { it.quality }
+                vids.distinctBy { it.videoTitle }
             } else {
                 vids
             }
@@ -296,21 +298,20 @@ class AnimeSama :
         }
 
         return (knownVideos + fallbackVideos)
-            .distinctBy { it.quality to it.url.substringBefore("?") }
-            .sort()
+            .distinctBy { it.videoTitle to it.videoUrl.substringBefore("?") }
     }
 
     // ============================ Utils =============================
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val voices = preferences.getString(PREF_VOICES_KEY, PREF_VOICES_DEFAULT)!!
         val quality = preferences.getString(PREF_QUALITY_KEY, PREF_QUALITY_DEFAULT)!!
         val player = preferences.getString(PREF_PLAYER_KEY, PREF_PLAYER_DEFAULT)!!
 
         return this.sortedWith(
             compareBy(
-                { it.quality.contains(voices, true) },
-                { it.quality.contains(player, true) },
-                { it.quality.contains(quality) },
+                { it.videoTitle.contains(voices, true) },
+                { it.videoTitle.contains(player, true) },
+                { it.videoTitle.contains(quality) },
             ),
         ).reversed()
     }
@@ -493,6 +494,10 @@ class AnimeSama :
         // Domain info at: https://anime-sama.pw
         private const val PREF_URL_DEFAULT = "https://anime-sama.to"
         private const val PREF_URL_SUMMARY = "Pour changer le domaine de l'extension. Voir https://anime-sama.pw"
+
+        // Links on the default and older domains still open once baseUrl has followed a redirect to a newer one.
+        // Keep the old domains in sync with their deeplink in build.gradle.kts.
+        private val KNOWN_HOSTS = setOf(PREF_URL_DEFAULT.toHttpUrl().host, "anime-sama.si", "anime-sama.tv")
 
         private val voicesMap = mapOf(
             "Préférer VOSTFR" to "vostfr",

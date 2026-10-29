@@ -20,14 +20,17 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
+import keiyoushi.utils.ParsedAnimeHttpLegacySource
 import keiyoushi.utils.catchingFlatMapBlocking
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.tryParse
 import keiyoushi.utils.useAsJsoup
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
@@ -35,11 +38,10 @@ import org.jsoup.nodes.Element
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class CuevanaEu(override val name: String, override val baseUrl: String) :
-    ParsedAnimeHttpSource(),
+@Source
+abstract class CuevanaEu :
+    ParsedAnimeHttpLegacySource(),
     ConfigurableAnimeSource {
-
-    override val lang = "es"
 
     override val supportsLatest = false
 
@@ -48,6 +50,9 @@ class CuevanaEu(override val name: String, override val baseUrl: String) :
     private val preferences by getPreferencesLazy()
 
     companion object {
+        // Old domains: keep in sync with their deeplink in build.gradle.kts
+        private val LEGACY_HOSTS = setOf("www.cuevana3.eu", "cuevana3.eu")
+
         private const val PREF_LANGUAGE_KEY = "preferred_language"
         private const val PREF_LANGUAGE_DEFAULT = "[LAT]"
         private val LANGUAGE_LIST = arrayOf("[LAT]", "[ENG]", "[CAST]", "[JAP]")
@@ -67,7 +72,7 @@ class CuevanaEu(override val name: String, override val baseUrl: String) :
 
     override fun popularAnimeSelector(): String = ".MovieList .TPostMv .TPost"
 
-    override fun popularAnimeRequest(page: Int): Request = GET("$baseUrl/peliculas/estrenos/page/$page")
+    override fun popularAnimeRequest(page: Int): Request = GET("$baseUrl/peliculas/estrenos/page/$page", headers)
 
     override fun popularAnimeFromElement(element: Element) = throw UnsupportedOperationException()
 
@@ -198,22 +203,42 @@ class CuevanaEu(override val name: String, override val baseUrl: String) :
 
     override fun videoListSelector() = throw UnsupportedOperationException()
 
-    override fun videoUrlParse(document: Document) = throw UnsupportedOperationException()
-
     override fun videoFromElement(element: Element) = throw UnsupportedOperationException()
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(PREF_QUALITY_KEY, PREF_QUALITY_DEFAULT)!!
         val server = preferences.getString(PREF_SERVER_KEY, PREF_SERVER_DEFAULT)!!
         val lang = preferences.getString(PREF_LANGUAGE_KEY, PREF_LANGUAGE_DEFAULT)!!
         return this.sortedWith(
             compareBy(
-                { it.quality.contains(lang) },
-                { it.quality.contains(server, true) },
-                { it.quality.contains(quality) },
-                { Regex("""(\d+)p""").find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
+                { it.videoTitle.contains(lang) },
+                { it.videoTitle.contains(server, true) },
+                { it.videoTitle.contains(quality) },
+                { Regex("""(\d+)p""").find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
             ),
         ).reversed()
+    }
+
+    override suspend fun getSearchAnime(page: Int, query: String, filters: AnimeFilterList): AnimesPage {
+        val url = query.toHttpUrlOrNull()
+        if (url != null) {
+            if (url.host != baseUrl.toHttpUrl().host && url.host !in LEGACY_HOSTS) {
+                throw Exception("Unsupported url")
+            }
+            val type = url.pathSegments.getOrNull(0)
+            val slug = url.pathSegments.getOrNull(1)?.takeIf(String::isNotEmpty)
+                ?: throw Exception("Unsupported url")
+            val path = when (type) {
+                "ver-pelicula", "ver-serie" -> "/$type/$slug"
+                "episodio" -> slug.substringBeforeLast("-temporada-", "").takeIf(String::isNotEmpty)?.let { "/ver-serie/$it" }
+                else -> null
+            } ?: throw Exception("Unsupported url")
+            val anime = getAnimeDetails(SAnime.create().apply { this.url = path })
+                .apply { initialized = true }
+            return AnimesPage(listOf(anime), false)
+        }
+
+        return super.getSearchAnime(page, query, filters)
     }
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
@@ -221,8 +246,13 @@ class CuevanaEu(override val name: String, override val baseUrl: String) :
         val genreFilter = filterList.find { it is GenreFilter } as GenreFilter
 
         return when {
-            query.isNotBlank() -> GET("$baseUrl/search?q=$query", headers)
-            genreFilter.state != 0 -> GET("$baseUrl/${genreFilter.toUriPart()}/page/$page")
+            query.isNotBlank() -> {
+                val url = "$baseUrl/search".toHttpUrl().newBuilder()
+                    .addQueryParameter("q", query)
+                    .build()
+                GET(url, headers)
+            }
+            genreFilter.state != 0 -> GET("$baseUrl/${genreFilter.toUriPart()}/page/$page", headers)
             else -> popularAnimeRequest(page)
         }
     }

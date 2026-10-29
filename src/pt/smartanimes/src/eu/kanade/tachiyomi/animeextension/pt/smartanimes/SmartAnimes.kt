@@ -4,17 +4,14 @@ import eu.kanade.tachiyomi.animeextension.pt.smartanimes.extractors.SmartAnimesE
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.animestream.AnimeStream
+import keiyoushi.annotation.Source
 import keiyoushi.utils.parallelCatchingFlatMapBlocking
 import keiyoushi.utils.useAsJsoup
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Response
 
-class SmartAnimes :
-    AnimeStream(
-        "pt-BR",
-        "SmartAnimes",
-        "https://smartanimes.net",
-    ) {
+@Source
+abstract class SmartAnimes : AnimeStream() {
     override fun headersBuilder() = super.headersBuilder().apply {
         add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
         add("Referer", "$baseUrl/")
@@ -56,12 +53,12 @@ class SmartAnimes :
         else -> SAnime.UNKNOWN
     }
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(videoSortPrefKey, videoSortPrefDefault)!!
         return sortedWith(
             compareBy(
-                { it.quality.contains(quality) },
-                { REGEX_QUALITY.find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
+                { it.videoTitle.contains(quality) },
+                { REGEX_QUALITY.find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
             ),
         ).reversed()
     }

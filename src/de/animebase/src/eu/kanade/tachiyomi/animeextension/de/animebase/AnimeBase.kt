@@ -12,9 +12,10 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
+import keiyoushi.annotation.Source
+import keiyoushi.utils.ParsedAnimeHttpLegacySource
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parallelCatchingFlatMapBlocking
 import keiyoushi.utils.useAsJsoup
@@ -24,15 +25,10 @@ import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
-class AnimeBase :
-    ParsedAnimeHttpSource(),
+@Source
+abstract class AnimeBase :
+    ParsedAnimeHttpLegacySource(),
     ConfigurableAnimeSource {
-
-    override val name = "Anime-Base"
-
-    override val baseUrl = "https://anime-base.net"
-
-    override val lang = "de"
 
     override val supportsLatest = true
 
@@ -198,8 +194,8 @@ class AnimeBase :
                 getVideosFromHoster(it.text(), it.attr("data-streamlink"))
                     .map { video ->
                         Video(
-                            video.url,
-                            "$language ${video.quality}",
+                            video.videoUrl,
+                            "$language ${video.videoTitle}",
                             video.videoUrl,
                             video.headers,
                             video.subtitleTracks,
@@ -225,15 +221,15 @@ class AnimeBase :
         } ?: emptyList()
     }
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val lang = preferences.getString(PREF_LANG_KEY, PREF_LANG_DEFAULT)!!
         val quality = preferences.getString(PREF_QUALITY_KEY, PREF_QUALITY_DEFAULT)!!
 
         return sortedWith(
             compareBy(
-                { it.quality.contains(lang) },
-                { it.quality.contains(quality) },
-                { Regex("""(\d+)p""").find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
+                { it.videoTitle.contains(lang) },
+                { it.videoTitle.contains(quality) },
+                { Regex("""(\d+)p""").find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
             ),
         ).reversed()
     }
@@ -241,8 +237,6 @@ class AnimeBase :
     override fun videoListSelector() = throw UnsupportedOperationException()
 
     override fun videoFromElement(element: Element) = throw UnsupportedOperationException()
-
-    override fun videoUrlParse(document: Document) = throw UnsupportedOperationException()
 
     // =============================== Search ===============================
     override fun setupPreferenceScreen(screen: PreferenceScreen) {

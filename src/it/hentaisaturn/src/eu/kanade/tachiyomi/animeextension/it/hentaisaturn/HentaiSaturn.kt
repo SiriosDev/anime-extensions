@@ -9,11 +9,12 @@ import eu.kanade.tachiyomi.animesource.model.AnimeUpdateStrategy
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.utils.addListPreference
 import keiyoushi.utils.delegate
+import keiyoushi.annotation.Source
+import keiyoushi.utils.ParsedAnimeHttpLegacySource
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParse
@@ -27,13 +28,10 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.io.encoding.Base64
 
-class HentaiSaturn :
-    ParsedAnimeHttpSource(),
+@Source
+abstract class HentaiSaturn :
+    ParsedAnimeHttpLegacySource(),
     ConfigurableAnimeSource {
-
-    override val name = "HentaiSaturn"
-
-    override val lang = "it"
 
     override val supportsLatest = true
 
@@ -171,8 +169,6 @@ class HentaiSaturn :
             compareByDescending { it.quality.contains(prQuality) },
         )
     }
-
-    override fun videoUrlParse(document: Document) = throw UnsupportedOperationException()
 
     override fun searchAnimeFromElement(element: Element): SAnime {
         val anime = SAnime.create()
@@ -487,11 +483,6 @@ class HentaiSaturn :
         private val QUALITY_VALUES = listOf("1080", "720", "480", "360", "240", "144")
         private val QUALITY_ENTRIES = QUALITY_VALUES.map { "${it}p" }
         private val QUALITY_DEFAULT = QUALITY_VALUES.first()
-
-        private const val PREF_DOMAIN = "preferred_domain"
-        private val DOMAIN_ENTRIES = listOf("hentaisaturn.tv", "hentaisaturn.com")
-        private val DOMAIN_VALUES = DOMAIN_ENTRIES.map { "https://$it" }
-        private val DOMAIN_DEFAULT = DOMAIN_VALUES.first()
     }
 
     @Serializable

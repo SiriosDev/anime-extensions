@@ -5,15 +5,16 @@ import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
+import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import kotlinx.serialization.json.Json
 import okhttp3.Response
 import uy.kohesive.injekt.injectLazy
-import kotlin.getValue
 
 abstract class Source :
     AnimeHttpSource(),
@@ -24,7 +25,9 @@ abstract class Source :
 
     open val json: Json by injectLazy()
 
-    val preferences: SharedPreferences by getPreferencesLazy { migration }
+    // Invoked inside the lambda: passing `migration` itself would read it in this constructor,
+    // before a subclass has initialized its override
+    val preferences: SharedPreferences by getPreferencesLazy { migration() }
 
     protected val handler by lazy { Handler(Looper.getMainLooper()) }
 
@@ -34,7 +37,9 @@ abstract class Source :
         }
     }
 
-    // TODO: Remove with ext lib 16
+    // A concrete default, so code generated for a `source { }` mirror or custom URL can call super
+    override fun setupPreferenceScreen(screen: PreferenceScreen) {}
+
     override fun popularAnimeRequest(page: Int) = throw UnsupportedOperationException()
     override fun popularAnimeParse(response: Response) = throw UnsupportedOperationException()
     override fun latestUpdatesRequest(page: Int) = throw UnsupportedOperationException()
@@ -49,6 +54,13 @@ abstract class Source :
     override fun animeDetailsParse(response: Response) = throw UnsupportedOperationException()
     override fun episodeListRequest(anime: SAnime) = throw UnsupportedOperationException()
     override fun episodeListParse(response: Response) = throw UnsupportedOperationException()
-    override fun videoListRequest(episode: SEpisode) = throw UnsupportedOperationException()
-    override fun videoListParse(response: Response) = throw UnsupportedOperationException()
+    override fun seasonListRequest(anime: SAnime) = throw UnsupportedOperationException()
+    override fun seasonListParse(response: Response) = throw UnsupportedOperationException()
+    override fun hosterListRequest(episode: SEpisode) = throw UnsupportedOperationException()
+    override fun hosterListParse(response: Response) = throw UnsupportedOperationException()
+    override fun videoListRequest(hoster: Hoster) = throw UnsupportedOperationException()
+    override fun videoListParse(
+        response: Response,
+        hoster: Hoster,
+    ) = throw UnsupportedOperationException()
 }

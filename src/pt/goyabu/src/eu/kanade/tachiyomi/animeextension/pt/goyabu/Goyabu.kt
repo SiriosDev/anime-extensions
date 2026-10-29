@@ -10,9 +10,10 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
+import keiyoushi.annotation.Source
+import keiyoushi.utils.ParsedAnimeHttpLegacySource
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parallelCatchingFlatMapBlocking
 import keiyoushi.utils.parseAs
@@ -22,6 +23,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
@@ -33,15 +35,10 @@ private val DATE_FORMATTER by lazy {
     SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.ENGLISH)
 }
 
-class Goyabu :
-    ParsedAnimeHttpSource(),
+@Source
+abstract class Goyabu :
+    ParsedAnimeHttpLegacySource(),
     ConfigurableAnimeSource {
-
-    override val name = "Goyabu"
-
-    override val baseUrl = "https://goyabu.io"
-
-    override val lang = "pt-BR"
 
     override val supportsLatest = true
 
@@ -110,9 +107,9 @@ class Goyabu :
         query: String,
         filters: AnimeFilterList,
     ): AnimesPage {
-        if (query.startsWith("https://")) {
-            val url = query.toHttpUrl()
-            if (url.host != baseUrl.toHttpUrl().host) {
+        val url = query.toHttpUrlOrNull()
+        if (url != null) {
+            if (url.host != baseUrl.toHttpUrl().host && url.host !in LEGACY_HOSTS) {
                 throw Exception("Unsupported url")
             }
             val searchQuery = if (url.pathSegments.size > 1) {
@@ -181,11 +178,15 @@ class Goyabu :
         val script = document.selectFirst("script:containsData(const allEpisodes)")
             ?: return emptyList()
 
-        val scriptText = script.data()
-        val jsonString = scriptText
-            .substringAfter("const allEpisodes =")
+        val afterName = script.data()
+            .substringAfter("const allEpisodes", missingDelimiterValue = "")
+            .trimStart()
+        if (!afterName.startsWith("=")) return emptyList()
+
+        val jsonString = afterName.substringAfter("=")
             .substringBefore(";")
             .trim()
+        if (jsonString.isEmpty()) return emptyList()
 
         val episodes = jsonString.parseAs<List<EpisodeDto>>(json)
         return episodes.reversed().map { it.toSEpisode() }
@@ -219,8 +220,6 @@ class Goyabu :
 
     override fun videoFromElement(element: Element): Video = throw UnsupportedOperationException()
 
-    override fun videoUrlParse(document: Document): String = throw UnsupportedOperationException()
-
     // ============================== Settings ==============================
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         ListPreference(screen.context).apply {
@@ -233,12 +232,12 @@ class Goyabu :
         }.also(screen::addPreference)
     }
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(PREF_QUALITY_KEY, PREF_QUALITY_DEFAULT)!!
         return sortedWith(
             compareBy(
-                { it.quality.contains(quality) },
-                { REGEX_QUALITY.find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
+                { it.videoTitle.contains(quality) },
+                { REGEX_QUALITY.find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
             ),
         ).reversed()
     }
@@ -257,6 +256,10 @@ class Goyabu :
 
     companion object {
         const val PREFIX_SEARCH = "path:"
+
+        // Old domains: keep in sync with their deeplink in build.gradle.kts
+        private val LEGACY_HOSTS = setOf("goyabu.to")
+
         private val REGEX_QUALITY by lazy { Regex("""(\d+)p""") }
 
         private const val PREF_QUALITY_KEY = "preferred_quality"

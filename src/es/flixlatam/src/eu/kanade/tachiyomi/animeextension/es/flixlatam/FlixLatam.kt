@@ -25,6 +25,7 @@ import eu.kanade.tachiyomi.multisrc.dooplay.DooPlay
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
+import keiyoushi.annotation.Source
 import keiyoushi.lib.cryptoaes.CryptoAES
 import keiyoushi.utils.bodyString
 import keiyoushi.utils.parallelCatchingFlatMap
@@ -44,12 +45,8 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.URLDecoder
 
-class FlixLatam :
-    DooPlay(
-        "es",
-        "FlixLatam",
-        "https://flixlatam.com",
-    ) {
+@Source
+abstract class FlixLatam : DooPlay() {
     override fun popularAnimeRequest(page: Int) = GET("$baseUrl/pelicula/page/$page")
 
     override fun popularAnimeSelector() = latestUpdatesSelector()
@@ -379,15 +376,15 @@ class FlixLatam :
         val download: String? = null,
     )
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(prefQualityKey, prefQualityDefault)!!
         val lang = preferences.getString(PREF_LANG_KEY, PREF_LANG_DEFAULT)!!
         val server = preferences.getString(PREF_SERVER_KEY, PREF_SERVER_DEFAULT)!!
         return sortedWith(
             compareBy(
-                { it.quality.contains(lang) },
-                { it.quality.contains(server, true) },
-                { it.quality.contains(quality) },
+                { it.videoTitle.contains(lang) },
+                { it.videoTitle.contains(server, true) },
+                { it.videoTitle.contains(quality) },
             ),
         ).reversed()
     }

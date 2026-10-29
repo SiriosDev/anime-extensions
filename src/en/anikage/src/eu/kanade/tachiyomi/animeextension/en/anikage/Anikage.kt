@@ -12,10 +12,11 @@ import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Track
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
-import eu.kanade.tachiyomi.network.interceptor.rateLimitHost
+import keiyoushi.annotation.Source
+import keiyoushi.network.rateLimit
+import keiyoushi.utils.AnimeHttpLegacySource
 import keiyoushi.utils.addListPreference
 import keiyoushi.utils.addSwitchPreference
 import keiyoushi.utils.getPreferencesLazy
@@ -33,28 +34,24 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.collections.associate
 import kotlin.collections.isNotEmpty
-import kotlin.time.Duration.Companion.seconds
 
-class Anikage :
-    AnimeHttpSource(),
+@Source
+abstract class Anikage :
+    AnimeHttpLegacySource(),
     ConfigurableAnimeSource {
-
-    override val baseUrl: String = "https://anikage.cc"
-
-    override val lang: String = "en"
 
     override val supportsLatest: Boolean = true
 
-    override val disableRelatedAnimesBySearch = true
+    private val browseApiUrl: HttpUrl get() = "$baseUrl/api/media/anime/browse".toHttpUrl()
 
-    override val name: String = "Anikage"
+    override val disableRelatedAnimesBySearch = true
 
     override fun headersBuilder(): Headers.Builder = super.headersBuilder()
         .set("Origin", baseUrl)
         .set("Referer", "$baseUrl/")
 
     override val client = network.client.newBuilder()
-        .rateLimitHost(baseUrl.toHttpUrl(), 3, 1.seconds)
+        .rateLimit(3)
         .build()
 
     private val preferences by getPreferencesLazy()
@@ -69,7 +66,7 @@ class Anikage :
     // ============================== Popular ===============================
 
     override fun popularAnimeRequest(page: Int): Request {
-        val requestUrl = ANIKAGE_API_URL
+        val requestUrl = browseApiUrl
             .newBuilder()
         requestUrl.addQueryParameter("page", page.toString())
         requestUrl.addQueryParameter("sort", "popularity")
@@ -86,7 +83,7 @@ class Anikage :
     // =============================== Latest ===============================
 
     override fun latestUpdatesRequest(page: Int): Request {
-        val requestUrl = ANIKAGE_API_URL
+        val requestUrl = browseApiUrl
             .newBuilder()
         requestUrl.addQueryParameter("page", page.toString())
         requestUrl.addQueryParameter("sort", "updated")
@@ -110,7 +107,7 @@ class Anikage :
         filters: AnimeFilterList,
     ): Request {
         val searchParams = Filters.getSearchParameters(filters)
-        val requestUrl = ANIKAGE_API_URL
+        val requestUrl = browseApiUrl
             .newBuilder()
         requestUrl.addQueryParameter("page", page.toString())
         requestUrl.addQueryParameter("limit", "25")
@@ -324,7 +321,7 @@ class Anikage :
                 .parseAs<EpisodeSource>()
 
             val tracks = episodeData.subtitles.map {
-                Track("https://gg.akage.lol/m3u8/${it.file}", it.label)
+                Track("https://og.bakayaro.live/stream/${it.file}", it.label)
             }
 
             val videos = episodeData.sources.parallelCatchingFlatMap { source ->
@@ -356,12 +353,12 @@ class Anikage :
             videos
         }
             .filterNot { video ->
-                val videoType = video.quality.substringBefore(" - ")
+                val videoType = video.videoTitle.substringBefore(" - ")
                 excludedTypes.any { videoType.equals(it, ignoreCase = true) }
             }
     }
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val isDubPreferred = preferences.subOrDub == "dub"
         val quality = preferences.quality
         val primaryType = if (isDubPreferred) "Dub" else "Sub"
@@ -370,17 +367,17 @@ class Anikage :
         val qualitiesList = PREF_QUALITY_ENTRIES.reversed()
 
         return sortedWith(
-            compareByDescending<Video> { it.quality.contains(quality) }
-                .thenByDescending { video -> qualitiesList.indexOfLast { video.quality.contains(it) } }
+            compareByDescending<Video> { it.videoTitle.contains(quality) }
+                .thenByDescending { video -> qualitiesList.indexOfLast { video.videoTitle.contains(it) } }
                 .thenByDescending { video ->
                     when {
-                        video.quality.contains(primaryType, ignoreCase = true) -> 2
-                        video.quality.contains(secondaryType, ignoreCase = true) -> 1
+                        video.videoTitle.contains(primaryType, ignoreCase = true) -> 2
+                        video.videoTitle.contains(secondaryType, ignoreCase = true) -> 1
                         else -> 0
                     }
                 }
                 .thenByDescending { video ->
-                    val videoServer = video.quality.substringAfter(" - ").substringBefore(" - ")
+                    val videoServer = video.videoTitle.substringAfter(" - ").substringBefore(" - ")
                     if (videoServer.equals(preferredServer, ignoreCase = true)) 1 else 0
                 },
         )
@@ -443,9 +440,9 @@ class Anikage :
     private fun buildGet(url: HttpUrl): Request {
         val postHeaders = headers.newBuilder().apply {
             set("Accept", "*/*")
-            set("Host", ANIKAGE_API_URL.host)
+            set("Host", browseApiUrl.host)
             set("Origin", baseUrl)
-            set("Referer", "$ANIKAGE_API/")
+            set("Referer", "$browseApiUrl/")
         }.build()
 
         return GET(url, headers = postHeaders)
@@ -553,8 +550,6 @@ class Anikage :
         private val DATE_FORMAT by lazy { SimpleDateFormat("yyyy-MM-dd", Locale.US) }
         private val DESCRIPTION_BR_REGEX = Regex("<br\\s*/?>", RegexOption.IGNORE_CASE)
 
-        private const val ANIKAGE_API = "https://anikage.cc/api/media/anime/browse"
-        private val ANIKAGE_API_URL by lazy { ANIKAGE_API.toHttpUrl() }
         private const val PREF_ADULT_KEY = "nsfw"
         private const val PREF_ADULT_DEFAULT = false
 

@@ -14,9 +14,10 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
+import keiyoushi.utils.ParsedAnimeHttpLegacySource
 import keiyoushi.utils.applicationContext
 import keiyoushi.utils.getPreferencesLazy
 import okhttp3.FormBody
@@ -28,19 +29,16 @@ import org.json.JSONObject
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import tryParse
-import uy.kohesive.injekt.api.get
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 private const val PAGE_SIZE = 20
 
-class NewGrounds :
-    ParsedAnimeHttpSource(),
+@Source
+abstract class NewGrounds :
+    ParsedAnimeHttpLegacySource(),
     ConfigurableAnimeSource {
 
-    override val lang = "all"
-    override val baseUrl = "https://www.newgrounds.com"
-    override val name = "Newgrounds"
     override val supportsLatest = true
 
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.ENGLISH)
@@ -258,7 +256,7 @@ class NewGrounds :
         val isPartOfSeries = relatedPlaylistUrl?.startsWith("$baseUrl/series") ?: false
 
         val episodes = if (isPartOfSeries) {
-            val response2 = client.newCall(GET(relatedPlaylistUrl!!, headers)).execute()
+            val response2 = client.newCall(GET(relatedPlaylistUrl, headers)).execute()
             val document2 = response2.asJsoup()
             parseEpisodeList(document2)
         } else {
@@ -357,8 +355,6 @@ class NewGrounds :
     override fun videoListSelector(): String = throw UnsupportedOperationException("Not Used")
 
     override fun videoFromElement(element: Element): Video = throw UnsupportedOperationException("Not Used")
-
-    override fun videoUrlParse(document: Document): String = throw UnsupportedOperationException("Not Used")
 
     // ============================== Filters ===============================
 

@@ -22,10 +22,11 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
+import keiyoushi.utils.AnimeHttpLegacySource
 import keiyoushi.utils.catchingFlatMapBlocking
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
@@ -39,15 +40,10 @@ import okhttp3.Response
 import uy.kohesive.injekt.injectLazy
 import java.net.URLEncoder
 
-class AnimeMovil :
-    AnimeHttpSource(),
+@Source
+abstract class AnimeMovil :
+    AnimeHttpLegacySource(),
     ConfigurableAnimeSource {
-
-    override val name = "AnimeMovil"
-
-    override val baseUrl = "https://animemeow.xyz"
-
-    override val lang = "es"
 
     private val json: Json by injectLazy()
 
@@ -157,7 +153,7 @@ class AnimeMovil :
 
                 val requestBody = "{\"show\": \"$sid\",\"temporada\": \"$t\"}"
                 val request = Request.Builder()
-                    .url("https://animemeow.xyz/api/obtener_episodios_x_temporada/")
+                    .url("$baseUrl/api/obtener_episodios_x_temporada/")
                     .post(requestBody.toJsonRequestBody())
                     .header("authority", response.request.url.host)
                     .header("origin", "https://${response.request.url.host}")
@@ -287,14 +283,14 @@ class AnimeMovil :
         }
     }
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(PREF_QUALITY_KEY, PREF_QUALITY_DEFAULT)!!
         val server = preferences.getString(PREF_SERVER_KEY, PREF_SERVER_DEFAULT)!!
         return this.sortedWith(
             compareBy(
-                { it.quality.contains(server, true) },
-                { it.quality.contains(quality) },
-                { Regex("""(\d+)p""").find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
+                { it.videoTitle.contains(server, true) },
+                { it.videoTitle.contains(quality) },
+                { Regex("""(\d+)p""").find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
             ),
         ).reversed()
     }

@@ -13,10 +13,11 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
+import keiyoushi.utils.AnimeHttpLegacySource
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
@@ -24,13 +25,8 @@ import okhttp3.Response
 import org.jsoup.nodes.Document
 import uy.kohesive.injekt.injectLazy
 
-class AnimeSrbija : AnimeHttpSource() {
-
-    override val name = "Anime Srbija"
-
-    override val baseUrl = "https://www.animesrbija.com"
-
-    override val lang = "sr"
+@Source
+abstract class AnimeSrbija : AnimeHttpLegacySource() {
 
     override val supportsLatest = true
 

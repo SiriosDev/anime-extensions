@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.multisrc.dooplay.DooPlay
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
+import keiyoushi.annotation.Source
 import keiyoushi.utils.bodyString
 import keiyoushi.utils.parallelCatchingFlatMapBlocking
 import keiyoushi.utils.useAsJsoup
@@ -21,12 +22,8 @@ import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
-class Animenix :
-    DooPlay(
-        "es",
-        "Animenix",
-        "https://animenix.com",
-    ) {
+@Source
+abstract class Animenix : DooPlay() {
 
     // ============================== Popular ===============================
     override fun popularAnimeRequest(page: Int) = GET("$baseUrl/ratings/$page")
@@ -177,13 +174,13 @@ class Animenix :
     }
 
     // ============================= Utilities ==============================
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(prefQualityKey, prefQualityDefault)!!
         val lang = preferences.getString(PREF_LANG_KEY, PREF_LANG_DEFAULT)!!
         return sortedWith(
             compareBy(
-                { it.quality.contains(lang) },
-                { it.quality.contains(quality) },
+                { it.videoTitle.contains(lang) },
+                { it.videoTitle.contains(quality) },
             ),
         ).reversed()
     }

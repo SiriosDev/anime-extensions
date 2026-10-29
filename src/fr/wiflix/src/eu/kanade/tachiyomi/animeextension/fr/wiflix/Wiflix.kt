@@ -12,21 +12,17 @@ import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.datalifeengine.DataLifeEngine
 import eu.kanade.tachiyomi.network.GET
+import keiyoushi.annotation.Source
 import keiyoushi.utils.parallelCatchingFlatMap
 import okhttp3.Request
 import okhttp3.Response
-import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
 /**
  * Domain list: https://wiflix-news.site | https://ww1.wiflix-adresses.fun
  */
-class Wiflix :
-    DataLifeEngine(
-        "Wiflix",
-        "https://flemmix.best",
-        "fr",
-    ) {
+@Source
+abstract class Wiflix : DataLifeEngine() {
     override val categories = arrayOf(
         Pair("<Sélectionner>", ""),
         Pair("Séries", "/serie-en-streaming/"),
@@ -101,6 +97,4 @@ class Wiflix :
     override fun videoFromElement(element: Element): Video = throw UnsupportedOperationException()
 
     override fun videoListSelector(): String = throw UnsupportedOperationException()
-
-    override fun videoUrlParse(document: Document): String = throw UnsupportedOperationException()
 }

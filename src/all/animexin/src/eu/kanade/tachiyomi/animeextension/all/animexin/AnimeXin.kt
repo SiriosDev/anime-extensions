@@ -10,18 +10,13 @@ import eu.kanade.tachiyomi.animeextension.all.animexin.extractors.VidstreamingEx
 import eu.kanade.tachiyomi.animeextension.all.animexin.extractors.YouTubeExtractor
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.animestream.AnimeStream
+import keiyoushi.annotation.Source
 import keiyoushi.utils.addListPreference
 import keiyoushi.utils.delegate
 import org.jsoup.nodes.Document
 
-class AnimeXin :
-    AnimeStream(
-        "all",
-        "AnimeXin",
-        "https://animexin.dev",
-    ) {
-    override val id = 4620219025406449669
-
+@Source
+abstract class AnimeXin : AnimeStream() {
     // =========================== Anime Details ============================
     override fun getAnimeDescription(document: Document): String? {
         val description = super.getAnimeDescription(document) ?: return null
@@ -91,14 +86,14 @@ class AnimeXin :
     private val SharedPreferences.langPref by preferences.delegate(PREF_LANG_KEY, PREF_LANG_DEFAULT)
 
     // ============================= Utilities ==============================
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.videoSortPref
         val language = preferences.langPref
 
         return sortedWith(
             compareBy(
-                { it.quality.contains(quality) },
-                { it.quality.contains(language, true) },
+                { it.videoTitle.contains(quality) },
+                { it.videoTitle.contains(language, true) },
             ),
         ).reversed()
     }

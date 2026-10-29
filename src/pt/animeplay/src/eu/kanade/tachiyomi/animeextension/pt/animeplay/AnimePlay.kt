@@ -10,6 +10,7 @@ import eu.kanade.tachiyomi.multisrc.dooplay.DooPlay
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
+import keiyoushi.annotation.Source
 import keiyoushi.utils.bodyString
 import keiyoushi.utils.parallelCatchingFlatMapBlocking
 import keiyoushi.utils.parseAs
@@ -22,12 +23,8 @@ import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
-class AnimePlay :
-    DooPlay(
-        "pt-BR",
-        "Anime Play",
-        "https://animeplay.cloud",
-    ) {
+@Source
+abstract class AnimePlay : DooPlay() {
     // ============================== Popular ===============================
     override fun popularAnimeRequest(page: Int) = GET("$baseUrl/anime", headers)
 
@@ -262,13 +259,13 @@ class AnimePlay :
         )
 
     // ============================= Utilities ==============================
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.getString(videoSortPrefKey, videoSortPrefDefault)!!
 
         return sortedWith(
-            compareByDescending<Video> { it.quality.contains(quality) }
+            compareByDescending<Video> { it.videoTitle.contains(quality) }
                 .thenByDescending {
-                    REGEX_QUALITY.find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                    REGEX_QUALITY.find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0
                 },
         )
     }

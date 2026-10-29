@@ -11,16 +11,13 @@ import aniyomi.lib.universalextractor.UniversalExtractor
 import aniyomi.lib.youruploadextractor.YourUploadExtractor
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.animestream.AnimeStream
+import keiyoushi.annotation.Source
 import keiyoushi.utils.addListPreference
 import keiyoushi.utils.delegate
 import keiyoushi.utils.getPreferencesLazy
 
-class AnimeYTES :
-    AnimeStream(
-        "es",
-        "AnimeYT.es",
-        "https://animeyt.es",
-    ) {
+@Source
+abstract class AnimeYTES : AnimeStream() {
     override val preferences by getPreferencesLazy()
 
     override val prefQualityDefault = "1080"
@@ -62,14 +59,14 @@ class AnimeYTES :
 
     private val SharedPreferences.serverPref by preferences.delegate(PREF_SERVER_KEY, PREF_SERVER_DEFAULT)
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.videoSortPref
         val server = preferences.serverPref
         return this.sortedWith(
             compareBy(
-                { it.quality.contains(server, true) },
-                { it.quality.contains(quality) },
-                { Regex("""(\d+)p""").find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
+                { it.videoTitle.contains(server, true) },
+                { it.videoTitle.contains(quality) },
+                { Regex("""(\d+)p""").find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
             ),
         ).reversed()
     }

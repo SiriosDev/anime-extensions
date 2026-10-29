@@ -6,12 +6,14 @@ import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
-import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.annotation.Source
 import keiyoushi.lib.jsunpacker.JsUnpacker
+import keiyoushi.utils.ParsedAnimeHttpLegacySource
+import keiyoushi.utils.chunkedPairs
 import keiyoushi.utils.parallelFlatMapBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -22,13 +24,8 @@ import org.jsoup.nodes.Element
 import uy.kohesive.injekt.injectLazy
 import keiyoushi.lib.synchrony.Deobfuscator as Synchrony
 
-class NimeGami : ParsedAnimeHttpSource() {
-
-    override val name = "NimeGami"
-
-    override val baseUrl = "https://nimegami.id"
-
-    override val lang = "id"
+@Source
+abstract class NimeGami : ParsedAnimeHttpLegacySource() {
 
     override val supportsLatest = true
 
@@ -232,15 +229,9 @@ class NimeGami : ParsedAnimeHttpSource() {
             .body.string()
             .let(Synchrony::deobfuscateScript)
             ?.let(urlPartRegex::findAll)
-            ?.map { it.groupValues.drop(1) }
-            ?.flatten()
-            ?.chunked(2)
-            ?.mapNotNull { videoPair ->
-                runCatching {
-                    val (part, videoUrl) = videoPair
-                    Video(videoUrl, "$quality - $part", videoUrl, headers)
-                }.getOrNull()
-            }
+            ?.map { it.groupValues[1] }
+            ?.chunkedPairs()
+            ?.map { (part, videoUrl) -> Video(videoUrl, "$quality - $part", videoUrl, headers) }
             ?.toList()
             ?: emptyList()
     }
@@ -253,8 +244,6 @@ class NimeGami : ParsedAnimeHttpSource() {
     override fun videoListSelector(): String = throw UnsupportedOperationException()
 
     override fun videoFromElement(element: Element): Video = throw UnsupportedOperationException()
-
-    override fun videoUrlParse(document: Document): String = throw UnsupportedOperationException()
 
     // ============================= Utilities ==============================
     private fun String.b64Decode() = String(Base64.decode(this, Base64.DEFAULT))

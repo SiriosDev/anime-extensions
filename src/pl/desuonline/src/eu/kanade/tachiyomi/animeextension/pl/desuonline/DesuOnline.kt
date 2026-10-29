@@ -8,18 +8,15 @@ import aniyomi.lib.sibnetextractor.SibnetExtractor
 import eu.kanade.tachiyomi.animeextension.pl.desuonline.extractors.CDAExtractor
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.multisrc.animestream.AnimeStream
+import keiyoushi.annotation.Source
 import keiyoushi.utils.addListPreference
 import keiyoushi.utils.delegate
 import okhttp3.Response
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class DesuOnline :
-    AnimeStream(
-        "pl",
-        "desu-online",
-        "https://desu-online.pl",
-    ) {
+@Source
+abstract class DesuOnline : AnimeStream() {
     override val dateFormatter by lazy {
         SimpleDateFormat("d MMMM, yyyy", Locale("pl", "PL"))
     }
@@ -57,15 +54,15 @@ class DesuOnline :
 
     private val SharedPreferences.serverPref by preferences.delegate(prefServerKey, prefServerDefault)
 
-    override fun List<Video>.sort(): List<Video> {
+    override fun List<Video>.sortVideos(): List<Video> {
         val quality = preferences.videoSortPref
         val server = preferences.serverPref
 
         return sortedWith(
             compareBy(
-                { it.quality.contains(server, true) },
-                { it.quality.contains(quality) },
-                { Regex("""(\d+)p""").find(it.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
+                { it.videoTitle.contains(server, true) },
+                { it.videoTitle.contains(quality) },
+                { Regex("""(\d+)p""").find(it.videoTitle)?.groupValues?.get(1)?.toIntOrNull() ?: 0 },
             ),
         ).reversed()
     }
