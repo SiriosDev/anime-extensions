@@ -201,8 +201,6 @@ abstract class HentaiSaturn :
         anime.status = parseStatus(statusText)
         if (statusText == "Finito" || statusText == "Droppato") {
             anime.update_strategy = AnimeUpdateStrategy.ONLY_FETCH_ONCE
-        } else {
-            anime.update_strategy = AnimeUpdateStrategy.ALWAYS_UPDATE
         }
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
@@ -218,6 +216,7 @@ abstract class HentaiSaturn :
         val votersText = document.selectFirst("#hentai-votes")?.text().orEmpty()
 
         anime.description = buildString {
+            if (statusText.isNotEmpty() && statusText !in arrayOf("In corso", "Finito", "Droppato")) append("Attenzione: ${statusText}\n\n")
             if (anime.title.lowercase() != alterTitle.lowercase() && alterTitle.isNotEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
             if (langText.isNotEmpty()) append("Lingua: ${langText}\n\n")
             if (descriptionText.isNotEmpty()) append("Descrizione: ${descriptionText}\n\n")
@@ -234,7 +233,6 @@ abstract class HentaiSaturn :
         statusString.contains("In corso") -> SAnime.ONGOING
         statusString.contains("Finito") -> SAnime.COMPLETED
         statusString.contains("Droppato") -> SAnime.CANCELLED
-        statusString.contains("Non rilasciato") -> SAnime.UNKNOWN
         else -> SAnime.UNKNOWN
     }
 
