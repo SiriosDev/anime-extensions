@@ -30,6 +30,8 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.io.encoding.Base64
 
+private val alterTitleRegex = Regex("\\s+\\(\\w+\\)")
+
 @Source
 abstract class HentaiSaturn :
     ParsedAnimeHttpLegacySource(),
@@ -203,15 +205,15 @@ abstract class HentaiSaturn :
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
         val alterTitle = document.selectFirst("div.text-center > p.mt-1")?.text().orEmpty()
-            .replace(Regex("\\(\\w+\\)"), "").trim()
-        val descriptionText = document.selectFirst("section:has(h2) div")?.text()?.trim().orEmpty()
-        val typeText = document.selectFirst("div:nth-of-type(1) > dd")?.text()?.trim().orEmpty()
-        val releaseText = document.selectFirst("div:nth-of-type(5) > dd")?.text()?.trim().orEmpty()
-        val langText = document.selectFirst("div:nth-of-type(3) > dd > a")?.text()?.trim().orEmpty()
-        val durationText = document.selectFirst("div:nth-of-type(7) > dd")?.text()?.trim().orEmpty()
-        val viewsText = document.selectFirst("div:nth-of-type(8) > dd")?.text()?.trim().orEmpty()
-        val voteText = document.selectFirst("#hentai-score")?.text()?.trim().orEmpty()
-        val votersText = document.selectFirst("#hentai-votes")?.text()?.trim().orEmpty()
+            .replace(alterTitleRegex, "")
+        val descriptionText = document.selectFirst("section:has(h2) div")?.text().orEmpty()
+        val typeText = document.selectFirst("div:nth-of-type(1) > dd")?.text().orEmpty()
+        val releaseText = document.selectFirst("div:nth-of-type(5) > dd")?.text().orEmpty()
+        val langText = document.selectFirst("div:nth-of-type(3) > dd > a")?.text().orEmpty()
+        val durationText = document.selectFirst("div:nth-of-type(7) > dd")?.text().orEmpty()
+        val viewsText = document.selectFirst("div:nth-of-type(8) > dd")?.text().orEmpty()
+        val voteText = document.selectFirst("#hentai-score")?.text().orEmpty()
+        val votersText = document.selectFirst("#hentai-votes")?.text().orEmpty()
 
         anime.description = buildString {
             if (anime.title.lowercase() != alterTitle.lowercase() && alterTitle.isNotEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
