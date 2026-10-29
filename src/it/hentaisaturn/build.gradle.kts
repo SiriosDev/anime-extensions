@@ -4,7 +4,7 @@ plugins {
 
 yuzono {
     name = "Hentai Saturn"
-    versionCode = 14
+    versionCode = 15
     contentWarning = ContentWarning.NSFW
     libVersion = "14"
 
@@ -13,7 +13,7 @@ yuzono {
         lang = "it"
         baseUrl("https://hentaisaturn.tv") {
             mirrors = listOf(
-                "hentaisaturn.com",
+                "https://hentaisaturn.com",
             )
         }
     }
@@ -22,4 +22,3 @@ yuzono {
 dependencies {
     implementation(project(":lib:playlistutils"))
 }
-
