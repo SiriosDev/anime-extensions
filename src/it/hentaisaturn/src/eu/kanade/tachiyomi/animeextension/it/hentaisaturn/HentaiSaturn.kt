@@ -19,6 +19,7 @@ import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParse
 import kotlinx.serialization.Serializable
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
@@ -182,11 +183,10 @@ abstract class HentaiSaturn :
     override fun searchAnimeSelector(): String = "a.group[href]:not(.flex)"
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
-        val parameters = getSearchParameters(filters)
         val url = "$baseUrl/filter/$page".toHttpUrl().newBuilder()
             .addQueryParameter("key", query)
-            .build()
-        return GET(url.toString() + parameters, headers)
+        getSearchParameters(url, filters)
+        return GET(url.build(), headers)
     }
 
     override fun animeDetailsParse(document: Document): SAnime {
@@ -242,121 +242,110 @@ abstract class HentaiSaturn :
     override fun latestUpdatesNextPageSelector(): String = "a[rel=\"next\"]"
 
     // Filters
-    internal class Genre(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class GenreList(genres: List<Genre>) : AnimeFilter.Group<Genre>("Generi", genres)
+    private class FilterOption(val id: String, name: String) : AnimeFilter.CheckBox(name)
+    private class FilterGroup(
+        val key: String,
+        title: String,
+        options: List<FilterOption>,
+    ) : AnimeFilter.Group<FilterOption>(title, options)
 
     private fun getGenres() = listOf(
-        Genre("1", "3D"),
-        Genre("2", "Ahegao"),
-        Genre("3", "Anal"),
-        Genre("4", "BDSM"),
-        Genre("5", "Big Boobs"),
-        Genre("6", "Blow Job"),
-        Genre("7", "Bondage"),
-        Genre("8", "Boob Job"),
-        Genre("9", "Censored"),
-        Genre("10", "Comedy"),
-        Genre("11", "Cosplay"),
-        Genre("12", "Creampie"),
-        Genre("13", "Dark Skin"),
-        Genre("14", "Facial"),
-        Genre("15", "Fantasy"),
-        Genre("16", "Filmed"),
-        Genre("17", "Foot Job"),
-        Genre("18", "Futanari"),
-        Genre("19", "Gangbang"),
-        Genre("20", "Glasses"),
-        Genre("21", "Hand Job"),
-        Genre("22", "Harem"),
-        Genre("25", "Horror"),
-        Genre("26", "Incest"),
-        Genre("27", "Inflation"),
-        Genre("29", "Lactation"),
-        Genre("30", "Loli"),
-        Genre("31", "Maid"),
-        Genre("32", "Masturbation"),
-        Genre("33", "Milf"),
-        Genre("34", "Mind Break"),
-        Genre("35", "Mind Control"),
-        Genre("36", "Monster"),
-        Genre("37", "NTR"),
-        Genre("38", "Nurse"),
-        Genre("39", "Orgy"),
-        Genre("40", "Plot"),
-        Genre("41", "POV"),
-        Genre("42", "Pregnant"),
-        Genre("43", "Public Sex"),
-        Genre("44", "Rape"),
-        Genre("45", "Reverse Rape"),
-        Genre("46", "Rimjob"),
-        Genre("48", "Scat"),
-        Genre("49", "School Girl"),
-        Genre("51", "Shota"),
-        Genre("52", "Softcore"),
-        Genre("53", "Swimsuit"),
-        Genre("54", "Teacher"),
-        Genre("55", "Tentacle"),
-        Genre("56", "Threesome"),
-        Genre("57", "Toys"),
-        Genre("58", "Trap"),
-        Genre("59", "Tsundere"),
-        Genre("60", "Ugly Bastard"),
-        Genre("61", "Uncensored"),
-        Genre("62", "Vanilla"),
-        Genre("63", "Virgin"),
-        Genre("64", "Watersports"),
-        Genre("65", "X-Ray"),
-        Genre("66", "Yaoi"),
-        Genre("67", "Yuri"),
+        FilterOption("1", "3D"),
+        FilterOption("2", "Ahegao"),
+        FilterOption("3", "Anal"),
+        FilterOption("4", "BDSM"),
+        FilterOption("5", "Big Boobs"),
+        FilterOption("6", "Blow Job"),
+        FilterOption("7", "Bondage"),
+        FilterOption("8", "Boob Job"),
+        FilterOption("9", "Censored"),
+        FilterOption("10", "Comedy"),
+        FilterOption("11", "Cosplay"),
+        FilterOption("12", "Creampie"),
+        FilterOption("13", "Dark Skin"),
+        FilterOption("14", "Facial"),
+        FilterOption("15", "Fantasy"),
+        FilterOption("16", "Filmed"),
+        FilterOption("17", "Foot Job"),
+        FilterOption("18", "Futanari"),
+        FilterOption("19", "Gangbang"),
+        FilterOption("20", "Glasses"),
+        FilterOption("21", "Hand Job"),
+        FilterOption("22", "Harem"),
+        FilterOption("25", "Horror"),
+        FilterOption("26", "Incest"),
+        FilterOption("27", "Inflation"),
+        FilterOption("29", "Lactation"),
+        FilterOption("30", "Loli"),
+        FilterOption("31", "Maid"),
+        FilterOption("32", "Masturbation"),
+        FilterOption("33", "Milf"),
+        FilterOption("34", "Mind Break"),
+        FilterOption("35", "Mind Control"),
+        FilterOption("36", "Monster"),
+        FilterOption("37", "NTR"),
+        FilterOption("38", "Nurse"),
+        FilterOption("39", "Orgy"),
+        FilterOption("40", "Plot"),
+        FilterOption("41", "POV"),
+        FilterOption("42", "Pregnant"),
+        FilterOption("43", "Public Sex"),
+        FilterOption("44", "Rape"),
+        FilterOption("45", "Reverse Rape"),
+        FilterOption("46", "Rimjob"),
+        FilterOption("48", "Scat"),
+        FilterOption("49", "School Girl"),
+        FilterOption("51", "Shota"),
+        FilterOption("52", "Softcore"),
+        FilterOption("53", "Swimsuit"),
+        FilterOption("54", "Teacher"),
+        FilterOption("55", "Tentacle"),
+        FilterOption("56", "Threesome"),
+        FilterOption("57", "Toys"),
+        FilterOption("58", "Trap"),
+        FilterOption("59", "Tsundere"),
+        FilterOption("60", "Ugly Bastard"),
+        FilterOption("61", "Uncensored"),
+        FilterOption("62", "Vanilla"),
+        FilterOption("63", "Virgin"),
+        FilterOption("64", "Watersports"),
+        FilterOption("65", "X-Ray"),
+        FilterOption("66", "Yaoi"),
+        FilterOption("67", "Yuri"),
     )
 
-    internal class Year(val id: String) : AnimeFilter.CheckBox(id)
-    private class YearList(years: List<Year>) : AnimeFilter.Group<Year>("Anno di Uscita", years)
-
-    private fun getYears(): List<Year> {
+    private fun getYears() = run {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-        return (1960..currentYear).map { Year(it.toString()) }
+        (1960..currentYear).map { FilterOption(it.toString(), it.toString()) }
     }
 
-    internal class State(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class StateList(states: List<State>) : AnimeFilter.Group<State>("Stato", states)
-
     private fun getStates() = listOf(
-        State("0", "In corso"),
-        State("1", "Finito"),
-        State("2", "Non rilasciato"),
-        State("3", "Droppato"),
+        FilterOption("0", "In corso"),
+        FilterOption("1", "Finito"),
+        FilterOption("2", "Non rilasciato"),
+        FilterOption("3", "Droppato"),
     )
-
-    internal class Type(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class TypeList(types: List<Type>) : AnimeFilter.Group<Type>("Tipo", types)
 
     private fun getTypes() = listOf(
-        Type("3", "OVA"),
-        Type("4", "Special"),
-        Type("5", "ONA"),
+        FilterOption("3", "OVA"),
+        FilterOption("4", "Special"),
+        FilterOption("5", "ONA"),
     )
-
-    internal class Lang(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua", langs)
 
     private fun getLangs() = listOf(
-        Lang("jp", "Giapponese"),
-        Lang("it", "Italiano"),
-        Lang("en", "Inglese"),
-        Lang("kr", "Coreano"),
-        Lang("ch", "Cinese"),
+        FilterOption("jp", "Giapponese"),
+        FilterOption("it", "Italiano"),
+        FilterOption("en", "Inglese"),
+        FilterOption("kr", "Coreano"),
+        FilterOption("ch", "Cinese"),
     )
-
-    internal class Subs(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class SubsList(subs: List<Subs>) : AnimeFilter.Group<Subs>("Sottotitoli", subs)
 
     private fun getSubs() = listOf(
-        Subs("0", "Sottotitolato"),
-        Subs("1", "Doppiato"),
+        FilterOption("0", "Sottotitolato"),
+        FilterOption("1", "Doppiato"),
     )
 
-    internal class Order(val id: String, name: String) : AnimeFilter.CheckBox(name) {
+    private class Order(val id: String, private val name: String) {
         override fun toString(): String = name
     }
 
@@ -377,87 +366,27 @@ abstract class HentaiSaturn :
 
     override fun getFilterList(): AnimeFilterList = AnimeFilterList(
         OrderList(getOrder()),
-        GenreList(getGenres()),
-        YearList(getYears()),
-        StateList(getStates()),
-        TypeList(getTypes()),
-        LangList(getLangs()),
-        SubsList(getSubs()),
+        FilterGroup("categories", "Generi", getGenres()),
+        FilterGroup("years", "Anno di Uscita", getYears()),
+        FilterGroup("states", "Stato", getStates()),
+        FilterGroup("types", "Tipo", getTypes()),
+        FilterGroup("languages", "Lingua", getLangs()),
+        FilterGroup("subtitles", "Sottotitoli", getSubs()),
     )
 
-    private fun getSearchParameters(filters: AnimeFilterList): String {
-        var totalString = ""
-        var variantGenre = 0
-        var variantState = 0
-        var variantType = 0
-        var variantYear = 0
-        var variantLang = 0
-        var variantSub = 0
+    private fun getSearchParameters(url: HttpUrl.Builder, filters: AnimeFilterList) {
         filters.forEach { filter ->
             when (filter) {
-                is GenreList -> { // ---Genre
-                    filter.state.forEach { genre ->
-                        if (genre.state) {
-                            totalString = totalString + "&categories%5B" + variantGenre.toString() + "%5D=" + genre.id
-                            variantGenre++
-                        }
+                is FilterGroup -> {
+                    filter.state.filter { it.state }.forEachIndexed { index, option ->
+                        url.addQueryParameter("${filter.key}[$index]", option.id)
                     }
                 }
 
-                is YearList -> { // ---Year
-                    filter.state.forEach { year ->
-                        if (year.state) {
-                            totalString = totalString + "&years%5B" + variantYear.toString() + "%5D=" + year.id
-                            variantYear++
-                        }
-                    }
-                }
-
-                is StateList -> { // ---State
-                    filter.state.forEach { state ->
-                        if (state.state) {
-                            totalString = totalString + "&states%5B" + variantState.toString() + "%5D=" + state.id
-                            variantState++
-                        }
-                    }
-                }
-
-                is TypeList -> { // ---Type
-                    filter.state.forEach { type ->
-                        if (type.state) {
-                            totalString = totalString + "&types%5B" + variantType.toString() + "%5D=" + type.id
-                            variantType++
-                        }
-                    }
-                }
-
-                is LangList -> { // ---Lang
-                    filter.state.forEach { lang ->
-                        if (lang.state) {
-                            totalString = totalString + "&languages%5B" + variantLang.toString() + "%5D=" + lang.id
-                            variantLang++
-                        }
-                    }
-                }
-
-                is SubsList -> { // ---Subs
-                    filter.state.forEach { subs ->
-                        if (subs.state) {
-                            totalString = totalString + "&subtitles%5B" + variantSub.toString() + "%5D=" + subs.id
-                            variantSub++
-                        }
-                    }
-                }
-
-                is OrderList -> { // ---Sorts
-                    val order = filter.values[filter.state]
-                    totalString = totalString + "&sort=" + order.id
-                }
-
-                else -> {}
+                is OrderList -> url.addQueryParameter("sort", filter.values[filter.state].id)
+                else -> Unit
             }
         }
-        return totalString
     }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
