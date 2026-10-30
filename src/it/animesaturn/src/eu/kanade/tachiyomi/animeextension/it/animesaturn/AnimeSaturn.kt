@@ -30,6 +30,8 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.io.encoding.Base64
 
+private const val ANIME_SELECTOR = "a.group[href]:not(.flex)"
+private const val NEXT_PAGE_SELECTOR = "a[rel=\"next\"]"
 private val alterTitleRegex = Regex("\\s+\\(\\w+\\)")
 
 @Source
@@ -41,13 +43,13 @@ abstract class AnimeSaturn :
 
     private val preferences by getPreferencesLazy()
 
-    override fun popularAnimeSelector(): String = "a.group[href]:not(.flex)"
+    override fun popularAnimeSelector(): String = ANIME_SELECTOR
 
     override fun popularAnimeRequest(page: Int): Request = GET("$baseUrl/ongoing/$page", headers)
 
     override fun popularAnimeFromElement(element: Element): SAnime = searchAnimeFromElement(element)
 
-    override fun popularAnimeNextPageSelector(): String = "a[rel=\"next\"]"
+    override fun popularAnimeNextPageSelector(): String = NEXT_PAGE_SELECTOR
 
     override suspend fun getEpisodeList(anime: SAnime): List<SEpisode> {
         val episodes = client.newCall(episodeListRequest(anime))
@@ -179,9 +181,9 @@ abstract class AnimeSaturn :
         return anime
     }
 
-    override fun searchAnimeNextPageSelector(): String = "a[rel=\"next\"]"
+    override fun searchAnimeNextPageSelector(): String = NEXT_PAGE_SELECTOR
 
-    override fun searchAnimeSelector(): String = "a.group[href]:not(.flex)"
+    override fun searchAnimeSelector(): String = ANIME_SELECTOR
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
         val url = "$baseUrl/filter/$page".toHttpUrl().newBuilder()
@@ -237,12 +239,12 @@ abstract class AnimeSaturn :
         else -> SAnime.UNKNOWN
     }
 
-    override fun latestUpdatesSelector(): String = "a.group[href]:not(.flex)"
+    override fun latestUpdatesSelector(): String = ANIME_SELECTOR
 
     override fun latestUpdatesFromElement(element: Element): SAnime = searchAnimeFromElement(element)
     override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/newest/$page", headers)
 
-    override fun latestUpdatesNextPageSelector(): String = "a[rel=\"next\"]"
+    override fun latestUpdatesNextPageSelector(): String = NEXT_PAGE_SELECTOR
 
     // Filters
     private class FilterCheckbox(val id: String, name: String) : AnimeFilter.CheckBox(name)
