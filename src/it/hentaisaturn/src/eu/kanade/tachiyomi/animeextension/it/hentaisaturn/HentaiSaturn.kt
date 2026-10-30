@@ -244,148 +244,158 @@ abstract class HentaiSaturn :
     override fun latestUpdatesNextPageSelector(): String = NEXT_PAGE_SELECTOR
 
     // Filters
-    private class FilterOption(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class FilterGroup(
+    private class CheckboxFilter(val id: String, name: String) : AnimeFilter.CheckBox(name)
+    private class CheckboxGroup(
         val key: String,
         title: String,
-        options: List<FilterOption>,
-    ) : AnimeFilter.Group<FilterOption>(title, options)
+        options: List<CheckboxFilter>,
+    ) : AnimeFilter.Group<CheckboxFilter>(title, options)
+
+    private class SelectFilter(val id: String, private val name: String) {
+        override fun toString(): String = name
+    }
+
+    private class SelectGroup(
+        val key: String,
+        title: String,
+        options: Array<SelectFilter>,
+    ) : AnimeFilter.Select<SelectFilter>(title, options)
 
     private fun getGenres() = listOf(
-        FilterOption("1", "3D"),
-        FilterOption("2", "Ahegao"),
-        FilterOption("3", "Anal"),
-        FilterOption("4", "BDSM"),
-        FilterOption("5", "Big Boobs"),
-        FilterOption("6", "Blow Job"),
-        FilterOption("7", "Bondage"),
-        FilterOption("8", "Boob Job"),
-        FilterOption("9", "Censored"),
-        FilterOption("10", "Comedy"),
-        FilterOption("11", "Cosplay"),
-        FilterOption("12", "Creampie"),
-        FilterOption("13", "Dark Skin"),
-        FilterOption("14", "Facial"),
-        FilterOption("15", "Fantasy"),
-        FilterOption("16", "Filmed"),
-        FilterOption("17", "Foot Job"),
-        FilterOption("18", "Futanari"),
-        FilterOption("19", "Gangbang"),
-        FilterOption("20", "Glasses"),
-        FilterOption("21", "Hand Job"),
-        FilterOption("22", "Harem"),
-        FilterOption("25", "Horror"),
-        FilterOption("26", "Incest"),
-        FilterOption("27", "Inflation"),
-        FilterOption("29", "Lactation"),
-        FilterOption("30", "Loli"),
-        FilterOption("31", "Maid"),
-        FilterOption("32", "Masturbation"),
-        FilterOption("33", "Milf"),
-        FilterOption("34", "Mind Break"),
-        FilterOption("35", "Mind Control"),
-        FilterOption("36", "Monster"),
-        FilterOption("37", "NTR"),
-        FilterOption("38", "Nurse"),
-        FilterOption("39", "Orgy"),
-        FilterOption("40", "Plot"),
-        FilterOption("41", "POV"),
-        FilterOption("42", "Pregnant"),
-        FilterOption("43", "Public Sex"),
-        FilterOption("44", "Rape"),
-        FilterOption("45", "Reverse Rape"),
-        FilterOption("46", "Rimjob"),
-        FilterOption("48", "Scat"),
-        FilterOption("49", "School Girl"),
-        FilterOption("51", "Shota"),
-        FilterOption("52", "Softcore"),
-        FilterOption("53", "Swimsuit"),
-        FilterOption("54", "Teacher"),
-        FilterOption("55", "Tentacle"),
-        FilterOption("56", "Threesome"),
-        FilterOption("57", "Toys"),
-        FilterOption("58", "Trap"),
-        FilterOption("59", "Tsundere"),
-        FilterOption("60", "Ugly Bastard"),
-        FilterOption("61", "Uncensored"),
-        FilterOption("62", "Vanilla"),
-        FilterOption("63", "Virgin"),
-        FilterOption("64", "Watersports"),
-        FilterOption("65", "X-Ray"),
-        FilterOption("66", "Yaoi"),
-        FilterOption("67", "Yuri"),
+        CheckboxFilter("1", "3D"),
+        CheckboxFilter("2", "Ahegao"),
+        CheckboxFilter("3", "Anal"),
+        CheckboxFilter("4", "BDSM"),
+        CheckboxFilter("5", "Big Boobs"),
+        CheckboxFilter("6", "Blow Job"),
+        CheckboxFilter("7", "Bondage"),
+        CheckboxFilter("8", "Boob Job"),
+        CheckboxFilter("9", "Censored"),
+        CheckboxFilter("10", "Comedy"),
+        CheckboxFilter("11", "Cosplay"),
+        CheckboxFilter("12", "Creampie"),
+        CheckboxFilter("13", "Dark Skin"),
+        CheckboxFilter("14", "Facial"),
+        CheckboxFilter("15", "Fantasy"),
+        CheckboxFilter("16", "Filmed"),
+        CheckboxFilter("17", "Foot Job"),
+        CheckboxFilter("18", "Futanari"),
+        CheckboxFilter("19", "Gangbang"),
+        CheckboxFilter("20", "Glasses"),
+        CheckboxFilter("21", "Hand Job"),
+        CheckboxFilter("22", "Harem"),
+        CheckboxFilter("25", "Horror"),
+        CheckboxFilter("26", "Incest"),
+        CheckboxFilter("27", "Inflation"),
+        CheckboxFilter("29", "Lactation"),
+        CheckboxFilter("30", "Loli"),
+        CheckboxFilter("31", "Maid"),
+        CheckboxFilter("32", "Masturbation"),
+        CheckboxFilter("33", "Milf"),
+        CheckboxFilter("34", "Mind Break"),
+        CheckboxFilter("35", "Mind Control"),
+        CheckboxFilter("36", "Monster"),
+        CheckboxFilter("37", "NTR"),
+        CheckboxFilter("38", "Nurse"),
+        CheckboxFilter("39", "Orgy"),
+        CheckboxFilter("40", "Plot"),
+        CheckboxFilter("41", "POV"),
+        CheckboxFilter("42", "Pregnant"),
+        CheckboxFilter("43", "Public Sex"),
+        CheckboxFilter("44", "Rape"),
+        CheckboxFilter("45", "Reverse Rape"),
+        CheckboxFilter("46", "Rimjob"),
+        CheckboxFilter("48", "Scat"),
+        CheckboxFilter("49", "School Girl"),
+        CheckboxFilter("51", "Shota"),
+        CheckboxFilter("52", "Softcore"),
+        CheckboxFilter("53", "Swimsuit"),
+        CheckboxFilter("54", "Teacher"),
+        CheckboxFilter("55", "Tentacle"),
+        CheckboxFilter("56", "Threesome"),
+        CheckboxFilter("57", "Toys"),
+        CheckboxFilter("58", "Trap"),
+        CheckboxFilter("59", "Tsundere"),
+        CheckboxFilter("60", "Ugly Bastard"),
+        CheckboxFilter("61", "Uncensored"),
+        CheckboxFilter("62", "Vanilla"),
+        CheckboxFilter("63", "Virgin"),
+        CheckboxFilter("64", "Watersports"),
+        CheckboxFilter("65", "X-Ray"),
+        CheckboxFilter("66", "Yaoi"),
+        CheckboxFilter("67", "Yuri"),
     )
 
     private fun getYears() = run {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-        (1960..currentYear).map { FilterOption(it.toString(), it.toString()) }
+        (1960..currentYear).map { CheckboxFilter(it.toString(), it.toString()) }
     }
 
     private fun getStates() = listOf(
-        FilterOption("0", "In corso"),
-        FilterOption("1", "Finito"),
-        FilterOption("2", "Non rilasciato"),
-        FilterOption("3", "Droppato"),
+        CheckboxFilter("0", "In corso"),
+        CheckboxFilter("1", "Finito"),
+        CheckboxFilter("2", "Non rilasciato"),
+        CheckboxFilter("3", "Droppato"),
     )
 
     private fun getTypes() = listOf(
-        FilterOption("3", "OVA"),
-        FilterOption("4", "Special"),
-        FilterOption("5", "ONA"),
+        CheckboxFilter("3", "OVA"),
+        CheckboxFilter("4", "Special"),
+        CheckboxFilter("5", "ONA"),
     )
 
     private fun getLangs() = listOf(
-        FilterOption("jp", "Giapponese"),
-        FilterOption("it", "Italiano"),
-        FilterOption("en", "Inglese"),
-        FilterOption("kr", "Coreano"),
-        FilterOption("ch", "Cinese"),
+        CheckboxFilter("jp", "Giapponese"),
+        CheckboxFilter("it", "Italiano"),
+        CheckboxFilter("en", "Inglese"),
+        CheckboxFilter("kr", "Coreano"),
+        CheckboxFilter("ch", "Cinese"),
     )
 
-    private fun getSubs() = listOf(
-        FilterOption("0", "Sottotitolato"),
-        FilterOption("1", "Doppiato"),
+    private fun getSubs() = arrayOf(
+        SelectFilter("", "Tutti"),
+        SelectFilter("0", "Sottotitolato"),
+        SelectFilter("1", "Doppiato"),
     )
-
-    private class Order(val id: String, private val name: String) {
-        override fun toString(): String = name
-    }
-
-    private class OrderList(sorts: Array<Order>) : AnimeFilter.Select<Order>("Ordina per", sorts)
 
     private fun getOrder() = arrayOf(
-        Order("standard", "Standard"),
-        Order("recent", "Ultime aggiunte"),
-        Order("az", "Lista A-Z"),
-        Order("za", "Lista Z-A"),
-        Order("oldest", "Più vecchi (anno)"),
-        Order("newest", "Più recenti (anno)"),
-        Order("most_viewed", "Più visti"),
-        Order("least_viewed", "Meno visti"),
-        Order("best_rated", "Meglio valutati"),
-        Order("worst_rated", "Peggio valutati"),
+        SelectFilter("standard", "Standard"),
+        SelectFilter("recent", "Ultime aggiunte"),
+        SelectFilter("az", "Lista A-Z"),
+        SelectFilter("za", "Lista Z-A"),
+        SelectFilter("oldest", "Più vecchi (anno)"),
+        SelectFilter("newest", "Più recenti (anno)"),
+        SelectFilter("most_viewed", "Più visti"),
+        SelectFilter("least_viewed", "Meno visti"),
+        SelectFilter("best_rated", "Meglio valutati"),
+        SelectFilter("worst_rated", "Peggio valutati"),
     )
 
     override fun getFilterList(): AnimeFilterList = AnimeFilterList(
-        OrderList(getOrder()),
-        FilterGroup("categories", "Generi", getGenres()),
-        FilterGroup("years", "Anno di Uscita", getYears()),
-        FilterGroup("states", "Stato", getStates()),
-        FilterGroup("types", "Tipo", getTypes()),
-        FilterGroup("languages", "Lingua", getLangs()),
-        FilterGroup("dub", "Sottotitoli", getSubs()),
+        SelectGroup("sort", "Ordina per", getOrder()),
+        CheckboxGroup("categories", "Generi", getGenres()),
+        CheckboxGroup("years", "Anno di Uscita", getYears()),
+        CheckboxGroup("states", "Stato", getStates()),
+        CheckboxGroup("types", "Tipo", getTypes()),
+        CheckboxGroup("languages", "Lingua", getLangs()),
+        SelectGroup("dub", "Sottotitoli", getSubs()),
     )
 
     private fun getSearchParameters(url: HttpUrl.Builder, filters: AnimeFilterList) {
         filters.forEach { filter ->
             when (filter) {
-                is FilterGroup -> {
+                is CheckboxGroup -> {
                     filter.state.filter { it.state }.forEachIndexed { index, option ->
                         url.addQueryParameter("${filter.key}[$index]", option.id)
                     }
                 }
 
-                is OrderList -> url.addQueryParameter("sort", filter.values[filter.state].id)
+                is SelectGroup -> {
+                    filter.values[filter.state].id.takeIf { it.isNotEmpty() }?.let {
+                        url.addQueryParameter(filter.key, it)
+                    }
+                }
+
                 else -> Unit
             }
         }
