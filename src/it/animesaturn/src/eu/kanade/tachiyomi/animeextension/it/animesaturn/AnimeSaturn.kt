@@ -195,13 +195,11 @@ abstract class AnimeSaturn :
     override fun animeDetailsParse(document: Document): SAnime {
         val anime = SAnime.create()
         anime.title = document.selectFirst("h1")!!.text()
-        anime.author = document.selectFirst("div a[href*=studios]")?.text()
-        val statusText = document.selectFirst("div a[href*=states]")?.text().orEmpty()
+        anime.author = document.selectFirst("div a[href*=studios] span.text-brand")?.text()
+        val statusText = document.selectFirst("div a[href*=states] span.text-brand")?.text().orEmpty()
         anime.status = parseStatus(statusText)
         if (statusText == "Finito" || statusText == "Droppato") {
             anime.update_strategy = AnimeUpdateStrategy.ONLY_FETCH_ONCE
-        } else {
-            anime.update_strategy = AnimeUpdateStrategy.ALWAYS_UPDATE
         }
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
@@ -218,6 +216,7 @@ abstract class AnimeSaturn :
         val votersText = document.selectFirst("#anime-votes")?.text().orEmpty()
 
         anime.description = buildString {
+            if (statusText.isNotEmpty() && statusText !in arrayOf("In corso", "Finito", "Droppato")) append("Attenzione: ${statusText}\n\n")
             if (anime.title.lowercase() != alterTitle.lowercase() && alterTitle.isNotEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
             if (langText.isNotEmpty()) append("Lingua: ${langText}\n\n")
             if (descriptionText.isNotEmpty()) append("Descrizione: ${descriptionText}\n\n")
@@ -235,7 +234,6 @@ abstract class AnimeSaturn :
         statusString.contains("In corso") -> SAnime.ONGOING
         statusString.contains("Finito") -> SAnime.COMPLETED
         statusString.contains("Droppato") -> SAnime.CANCELLED
-        statusString.contains("Non rilasciato") -> SAnime.UNKNOWN
         else -> SAnime.UNKNOWN
     }
 
