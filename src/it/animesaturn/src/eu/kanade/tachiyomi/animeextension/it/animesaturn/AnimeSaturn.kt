@@ -73,7 +73,6 @@ abstract class AnimeSaturn :
         return episode
     }
 
-
 //    private suspend fun enrichEpisode(episode: SEpisode): SEpisode {
 //        client.newCall(GET(baseUrl + episode.url, headers))
 //            .awaitSuccess()
@@ -115,7 +114,6 @@ abstract class AnimeSaturn :
         val name: String? = null,
     )
 
-
     override fun hosterListRequest(episode: SEpisode): Request = GET(baseUrl + episode.url, headers)
 
     override fun hosterListParse(response: Response): List<Hoster> {
@@ -128,7 +126,6 @@ abstract class AnimeSaturn :
                 internalData = url,
             ),
         )
-
     }
 
     private val playlistUtils by lazy { PlaylistUtils(client, headers) }
@@ -141,7 +138,6 @@ abstract class AnimeSaturn :
             }
         }
     }
-
 
     override suspend fun getVideoList(hoster: Hoster): List<Video> {
         val request = Request.Builder()
@@ -190,8 +186,8 @@ abstract class AnimeSaturn :
 
     override fun searchAnimeParse(response: Response): AnimesPage {
         val document = response.asJsoup()
-        val anime = document.select("a.group[href]:not(.flex)").map(::searchAnimeFromElement)
-        return AnimesPage(anime, document.selectFirst("a[rel=\"next\"]") != null)
+        val anime = document.select(ANIME_SELECTOR).map(::searchAnimeFromElement)
+        return AnimesPage(anime, document.selectFirst(NEXT_PAGE_SELECTOR) != null)
     }
 
     override fun animeDetailsParse(response: Response): SAnime {
@@ -246,7 +242,6 @@ abstract class AnimeSaturn :
         statusString.contains("Droppato") -> SAnime.CANCELLED
         else -> SAnime.UNKNOWN
     }
-
 
     override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/newest/$page", headers)
     override fun latestUpdatesParse(response: Response): AnimesPage = searchAnimeParse(response)
