@@ -143,11 +143,11 @@ abstract class AnimeSaturn :
 
     private fun decodeUrl(url: String, token: String): String {
         val base = Base64.decode(url).decodeToString()
-        val builder = StringBuilder()
-        for (i in base.indices) {
-            builder.append(base[i].code.xor(token[i % token.length].code).toChar())
+        return buildString {
+            for (i in base.indices) {
+                append(base[i].code.xor(token[i % token.length].code).toChar())
+            }
         }
-        return builder.toString()
     }
 
     override fun videoListRequest(episode: SEpisode): Request {
