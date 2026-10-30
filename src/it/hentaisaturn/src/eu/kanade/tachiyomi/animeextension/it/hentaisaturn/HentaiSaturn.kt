@@ -199,7 +199,7 @@ abstract class HentaiSaturn :
         anime.author = document.selectFirst("div a[href*=studios]")?.text()
         val statusText = document.selectFirst("div a[href*=states]")?.text().orEmpty()
         anime.status = parseStatus(statusText)
-        if (statusText == "Finito" || statusText == "Droppato") {
+        if (anime.status == SAnime.COMPLETED || anime.status == SAnime.CANCELLED) {
             anime.update_strategy = AnimeUpdateStrategy.ONLY_FETCH_ONCE
         }
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
