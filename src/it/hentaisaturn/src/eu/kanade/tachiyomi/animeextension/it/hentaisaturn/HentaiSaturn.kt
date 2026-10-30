@@ -204,8 +204,11 @@ abstract class HentaiSaturn :
         }
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
-        val alterTitle = document.selectFirst("div.text-center > p.mt-1")?.text().orEmpty()
-            .replace(alterTitleRegex, "")
+        var alterTitle = document.selectFirst("div.text-center > p.mt-1")?.text().orEmpty()
+        if (anime.title == alterTitle) {
+            alterTitle = ""
+        }
+        alterTitle = alterTitle.replace(alterTitleRegex, "")
         val descriptionText = document.selectFirst("section:has(h2) div")?.text().orEmpty()
         val typeText = document.selectFirst("div:nth-of-type(1) > dd")?.text().orEmpty()
         val releaseText = document.selectFirst("div:nth-of-type(5) > dd")?.text().orEmpty()
