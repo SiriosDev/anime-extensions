@@ -195,7 +195,11 @@ abstract class AnimeSaturn :
     override fun animeDetailsParse(document: Document): SAnime {
         val anime = SAnime.create()
         anime.title = document.selectFirst("h1")!!.text()
-        anime.author = document.selectFirst("div a[href*=studios] span.text-brand")?.text()
+        var studio = document.selectFirst("div a[href*=studios] span.text-brand")?.text().orEmpty()
+        if (studio.isEmpty()) {
+            studio = document.select("div a[href*=studios]").joinToString { it.text() }
+        }
+        anime.author = studio
         val statusText = document.selectFirst("div a[href*=states] span.text-brand")?.text().orEmpty()
         anime.status = parseStatus(statusText)
         if (anime.status == SAnime.COMPLETED || anime.status == SAnime.CANCELLED) {
