@@ -207,8 +207,11 @@ abstract class AnimeSaturn :
         }
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
-        val alterTitle = document.selectFirst(".ag-head > .mt-1")?.text().orEmpty()
-            .replace(alterTitleRegex, "")
+        var alterTitle = document.selectFirst(".ag-head > .mt-1")?.text().orEmpty()
+        if (anime.title == alterTitle) {
+            alterTitle = ""
+        }
+        alterTitle = alterTitle.replace(alterTitleRegex, "")
         val descriptionText = document.selectFirst(".text-pretty")?.text().orEmpty()
         val typeText = document.selectFirst("a:nth-of-type(1) > .flex > .font-medium")?.text().orEmpty()
         val releaseSeasonText = document.selectFirst("a:nth-of-type(2) > .flex > .font-medium")?.text().orEmpty()
@@ -226,7 +229,7 @@ abstract class AnimeSaturn :
             if (descriptionText.isNotEmpty()) append("Descrizione: ${descriptionText}\n\n")
             if (typeText.isNotEmpty()) append("Tipo: ${typeText}\n\n")
             if (releaseSeasonText.isNotEmpty()) append("Stagione: ${releaseSeasonText}\n\n")
-            if (releaseDateText.isNotEmpty()) append("Uscita: $releaseSeasonText - ${releaseDateText}\n\n")
+            if (releaseDateText.isNotEmpty()) append("Uscita: ${releaseDateText}\n\n")
             if (durationText.isNotEmpty()) append("Durata Media: ${durationText}\n\n")
             if (viewsText.isNotEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
             if (voteText.isNotEmpty()) append("Voto: ★$voteText/10 ($votersText)\n\n")
