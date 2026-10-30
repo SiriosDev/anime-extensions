@@ -30,6 +30,8 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.io.encoding.Base64
 
+private val alterTitleRegex = Regex("\\s+\\(\\w+\\)")
+
 @Source
 abstract class AnimeSaturn :
     ParsedAnimeHttpLegacySource(),
@@ -202,22 +204,23 @@ abstract class AnimeSaturn :
         anime.genre = document.select("div a[href*=categories]").joinToString { it.text() }
         anime.thumbnail_url = document.selectFirst("img[src*=locandine]")?.attr("src")
         val alterTitle = document.selectFirst(".ag-head > .mt-1")?.text().orEmpty()
-            .replace(Regex("\\(\\w+\\)"), "").trim()
-        val descriptionText = document.selectFirst(".text-pretty")?.text()?.trim().orEmpty()
-        val typeText = document.selectFirst("a:nth-of-type(1) > .flex > .font-medium")?.text()?.trim().orEmpty()
-        val releaseSeasonText = document.selectFirst("a:nth-of-type(2) > .flex > .font-medium")?.text()?.trim().orEmpty()
-        val releaseDateText = document.selectFirst("div:nth-of-type(2) > .font-medium")?.text()?.trim().orEmpty()
-        val langText = document.selectFirst("a:nth-of-type(3) .font-medium")?.text()?.trim().orEmpty()
-        val durationText = document.selectFirst("div:nth-of-type(4) > .font-medium")?.text()?.trim().orEmpty()
-        val viewsText = document.selectFirst("div:nth-of-type(6) > .font-medium")?.text()?.trim().orEmpty()
-        val voteText = document.selectFirst("#anime-score")?.text()?.trim().orEmpty()
-        val votersText = document.selectFirst("#anime-votes")?.text()?.trim().orEmpty()
+            .replace(alterTitleRegex, "")
+        val descriptionText = document.selectFirst(".text-pretty")?.text().orEmpty()
+        val typeText = document.selectFirst("a:nth-of-type(1) > .flex > .font-medium")?.text().orEmpty()
+        val releaseSeasonText = document.selectFirst("a:nth-of-type(2) > .flex > .font-medium")?.text().orEmpty()
+        val releaseDateText = document.selectFirst("div:nth-of-type(2) > .font-medium")?.text().orEmpty()
+        val langText = document.selectFirst("a:nth-of-type(3) .font-medium")?.text().orEmpty()
+        val durationText = document.selectFirst("div:nth-of-type(4) > .font-medium")?.text().orEmpty()
+        val viewsText = document.selectFirst("div:nth-of-type(6) > .font-medium")?.text().orEmpty()
+        val voteText = document.selectFirst("#anime-score")?.text().orEmpty()
+        val votersText = document.selectFirst("#anime-votes")?.text().orEmpty()
 
         anime.description = buildString {
             if (anime.title.lowercase() != alterTitle.lowercase() && alterTitle.isNotEmpty()) append("Titolo Alternativo: ${alterTitle}\n\n")
             if (langText.isNotEmpty()) append("Lingua: ${langText}\n\n")
             if (descriptionText.isNotEmpty()) append("Descrizione: ${descriptionText}\n\n")
             if (typeText.isNotEmpty()) append("Tipo: ${typeText}\n\n")
+            if (releaseSeasonText.isNotEmpty()) append("Stagione: ${releaseSeasonText}\n\n")
             if (releaseDateText.isNotEmpty()) append("Uscita: $releaseSeasonText - ${releaseDateText}\n\n")
             if (durationText.isNotEmpty()) append("Durata Media: ${durationText}\n\n")
             if (viewsText.isNotEmpty()) append("Visualizzazioni: ${viewsText}\n\n")
