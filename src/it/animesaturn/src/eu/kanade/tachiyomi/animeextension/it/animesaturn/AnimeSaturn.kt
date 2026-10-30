@@ -19,6 +19,7 @@ import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParse
 import kotlinx.serialization.Serializable
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
@@ -181,11 +182,10 @@ abstract class AnimeSaturn :
     override fun searchAnimeSelector(): String = "a.group[href]:not(.flex)"
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
-        val parameters = getSearchParameters(filters)
         val url = "$baseUrl/filter/$page".toHttpUrl().newBuilder()
             .addQueryParameter("key", query)
-            .build()
-        return GET(url.toString() + parameters, headers)
+        getSearchParameters(url, filters)
+        return GET(url.build(), headers)
     }
 
     override fun animeDetailsParse(document: Document): SAnime {
@@ -242,229 +242,156 @@ abstract class AnimeSaturn :
     override fun latestUpdatesNextPageSelector(): String = "a[rel=\"next\"]"
 
     // Filters
-    internal class Genre(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class GenreList(genres: List<Genre>) : AnimeFilter.Group<Genre>("Generi", genres)
+    private class FilterCheckbox(val id: String, name: String) : AnimeFilter.CheckBox(name)
+    private class CheckboxGroup(
+        val key: String,
+        title: String,
+        options: List<FilterCheckbox>,
+    ) : AnimeFilter.Group<FilterCheckbox>(title, options)
 
-    private fun getGenres() = listOf(
-        Genre("3", "Arti Marziali"),
-        Genre("5", "Avanguardia"),
-        Genre("2", "Avventura"),
-        Genre("1", "Azione"),
-        Genre("47", "Bambini"),
-        Genre("4", "Commedia"),
-        Genre("6", "Demoni"),
-        Genre("7", "Drammatico"),
-        Genre("8", "Ecchi"),
-        Genre("9", "Fantasy"),
-        Genre("10", "Gioco"),
-        Genre("11", "Harem"),
-        Genre("43", "Hentai"),
-        Genre("13", "Horror"),
-        Genre("49", "Isekai"),
-        Genre("14", "Josei"),
-        Genre("16", "Magia"),
-        Genre("18", "Mecha"),
-        Genre("19", "Militari"),
-        Genre("21", "Mistero"),
-        Genre("20", "Musicale"),
-        Genre("22", "Parodia"),
-        Genre("23", "Polizia"),
-        Genre("24", "Psicologico"),
-        Genre("46", "Romantico"),
-        Genre("26", "Samurai"),
-        Genre("28", "Sci-Fi"),
-        Genre("27", "Scolastico"),
-        Genre("29", "Seinen"),
-        Genre("25", "Sentimentale"),
-        Genre("30", "Shoujo"),
-        Genre("31", "Shoujo Ai"),
-        Genre("32", "Shounen"),
-        Genre("33", "Shounen Ai"),
-        Genre("34", "Slice of Life"),
-        Genre("37", "Soprannaturale"),
-        Genre("35", "Spazio"),
-        Genre("36", "Sport"),
-        Genre("12", "Storico"),
-        Genre("38", "Superpoteri"),
-        Genre("39", "Thriller"),
-        Genre("40", "Vampiri"),
-        Genre("48", "Veicoli"),
-        Genre("41", "Yaoi"),
-        Genre("42", "Yuri"),
-    )
-
-    internal class Year(val id: String) : AnimeFilter.CheckBox(id)
-    private class YearList(years: List<Year>) : AnimeFilter.Group<Year>("Anno di Uscita", years)
-
-    private fun getYears(): List<Year> {
-        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-        return (1960..currentYear).map { Year(it.toString()) }
-    }
-
-    internal class State(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class StateList(states: List<State>) : AnimeFilter.Group<State>("Stato", states)
-
-    private fun getStates() = listOf(
-        State("0", "In corso"),
-        State("1", "Finito"),
-        State("2", "Non rilasciato"),
-        State("3", "Droppato"),
-    )
-
-    internal class Type(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class TypeList(types: List<Type>) : AnimeFilter.Group<Type>("Tipo", types)
-
-    private fun getTypes() = listOf(
-        Type("1", "TV"),
-        Type("2", "Movie"),
-        Type("3", "OVA"),
-        Type("4", "Special"),
-        Type("5", "ONA"),
-    )
-
-    internal class Lang(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class LangList(langs: List<Lang>) : AnimeFilter.Group<Lang>("Lingua", langs)
-
-    private fun getLangs() = listOf(
-        Lang("jp", "Giapponese"),
-        Lang("it", "Italiano"),
-        Lang("en", "Inglese"),
-        Lang("kr", "Coreano"),
-        Lang("ch", "Cinese"),
-    )
-
-    internal class Subs(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class SubsList(subs: List<Subs>) : AnimeFilter.Group<Subs>("Sottotitoli", subs)
-
-    private fun getSubs() = listOf(
-        Subs("0", "Sottotitolato"),
-        Subs("1", "Doppiato"),
-    )
-
-    internal class ReleaseSeason(val id: String, name: String) : AnimeFilter.CheckBox(name)
-    private class ReleaseSeasonList(seasons: List<ReleaseSeason>) : AnimeFilter.Group<ReleaseSeason>("Stagione di Uscita", seasons)
-
-    private fun getReleaseSeasons() = listOf(
-        ReleaseSeason("spring", "Primavera"),
-        ReleaseSeason("summer", "Estate"),
-        ReleaseSeason("fall", "Autunno"),
-        ReleaseSeason("winter", "Inverno"),
-        ReleaseSeason("unknown", "Sconosciuta"),
-    )
-
-    internal class Order(val id: String, name: String) : AnimeFilter.CheckBox(name) {
+    private class FilterSelect(val id: String, private val name: String) {
         override fun toString(): String = name
     }
 
-    private class OrderList(sorts: Array<Order>) : AnimeFilter.Select<Order>("Ordina per", sorts)
+    private class SelectGroup(
+        val key: String,
+        title: String,
+        options: Array<FilterSelect>,
+    ) : AnimeFilter.Select<FilterSelect>(title, options)
+
+    private fun getGenres() = listOf(
+        FilterCheckbox("3", "Arti Marziali"),
+        FilterCheckbox("5", "Avanguardia"),
+        FilterCheckbox("2", "Avventura"),
+        FilterCheckbox("1", "Azione"),
+        FilterCheckbox("47", "Bambini"),
+        FilterCheckbox("4", "Commedia"),
+        FilterCheckbox("6", "Demoni"),
+        FilterCheckbox("7", "Drammatico"),
+        FilterCheckbox("8", "Ecchi"),
+        FilterCheckbox("9", "Fantasy"),
+        FilterCheckbox("10", "Gioco"),
+        FilterCheckbox("11", "Harem"),
+        FilterCheckbox("43", "Hentai"),
+        FilterCheckbox("13", "Horror"),
+        FilterCheckbox("49", "Isekai"),
+        FilterCheckbox("14", "Josei"),
+        FilterCheckbox("16", "Magia"),
+        FilterCheckbox("18", "Mecha"),
+        FilterCheckbox("19", "Militari"),
+        FilterCheckbox("21", "Mistero"),
+        FilterCheckbox("20", "Musicale"),
+        FilterCheckbox("22", "Parodia"),
+        FilterCheckbox("23", "Polizia"),
+        FilterCheckbox("24", "Psicologico"),
+        FilterCheckbox("46", "Romantico"),
+        FilterCheckbox("26", "Samurai"),
+        FilterCheckbox("28", "Sci-Fi"),
+        FilterCheckbox("27", "Scolastico"),
+        FilterCheckbox("29", "Seinen"),
+        FilterCheckbox("25", "Sentimentale"),
+        FilterCheckbox("30", "Shoujo"),
+        FilterCheckbox("31", "Shoujo Ai"),
+        FilterCheckbox("32", "Shounen"),
+        FilterCheckbox("33", "Shounen Ai"),
+        FilterCheckbox("34", "Slice of Life"),
+        FilterCheckbox("37", "Soprannaturale"),
+        FilterCheckbox("35", "Spazio"),
+        FilterCheckbox("36", "Sport"),
+        FilterCheckbox("12", "Storico"),
+        FilterCheckbox("38", "Superpoteri"),
+        FilterCheckbox("39", "Thriller"),
+        FilterCheckbox("40", "Vampiri"),
+        FilterCheckbox("48", "Veicoli"),
+        FilterCheckbox("41", "Yaoi"),
+        FilterCheckbox("42", "Yuri"),
+    )
+
+    private fun getYears() = run {
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        (1960..currentYear).map { FilterCheckbox(it.toString(), it.toString()) }
+    }
+
+    private fun getStates() = listOf(
+        FilterCheckbox("0", "In corso"),
+        FilterCheckbox("1", "Finito"),
+        FilterCheckbox("2", "Non rilasciato"),
+        FilterCheckbox("3", "Droppato"),
+    )
+
+    private fun getTypes() = listOf(
+        FilterCheckbox("1", "TV"),
+        FilterCheckbox("2", "Movie"),
+        FilterCheckbox("3", "OVA"),
+        FilterCheckbox("4", "Special"),
+        FilterCheckbox("5", "ONA"),
+    )
+
+    private fun getLangs() = listOf(
+        FilterCheckbox("jp", "Giapponese"),
+        FilterCheckbox("it", "Italiano"),
+        FilterCheckbox("fr", "Francese"),
+        FilterCheckbox("en", "Inglese"),
+        FilterCheckbox("kr", "Coreano"),
+        FilterCheckbox("ch", "Cinese"),
+    )
+
+    private fun getSubs() = arrayOf(
+        FilterSelect("", "Tutti"),
+        FilterSelect("0", "Sottotitolato"),
+        FilterSelect("1", "Doppiato"),
+    )
+
+    private fun getReleaseSeasons() = listOf(
+        FilterCheckbox("spring", "Primavera"),
+        FilterCheckbox("summer", "Estate"),
+        FilterCheckbox("fall", "Autunno"),
+        FilterCheckbox("winter", "Inverno"),
+        FilterCheckbox("unknown", "Sconosciuta"),
+    )
 
     private fun getOrder() = arrayOf(
-        Order("standard", "Standard"),
-        Order("recent", "Ultime aggiunte"),
-        Order("az", "Lista A-Z"),
-        Order("za", "Lista Z-A"),
-        Order("oldest", "Più vecchi (anno)"),
-        Order("newest", "Più recenti (anno)"),
-        Order("most_viewed", "Più visti"),
-        Order("least_viewed", "Meno visti"),
-        Order("best_rated", "Meglio valutati"),
-        Order("worst_rated", "Peggio valutati"),
+        FilterSelect("standard", "Standard"),
+        FilterSelect("recent", "Ultime aggiunte"),
+        FilterSelect("az", "Lista A-Z"),
+        FilterSelect("za", "Lista Z-A"),
+        FilterSelect("oldest", "Più vecchi (anno)"),
+        FilterSelect("newest", "Più recenti (anno)"),
+        FilterSelect("most_viewed", "Più visti"),
+        FilterSelect("least_viewed", "Meno visti"),
+        FilterSelect("best_rated", "Meglio valutati"),
+        FilterSelect("worst_rated", "Peggio valutati"),
     )
 
     override fun getFilterList(): AnimeFilterList = AnimeFilterList(
-        OrderList(getOrder()),
-        GenreList(getGenres()),
-        YearList(getYears()),
-        StateList(getStates()),
-        ReleaseSeasonList(getReleaseSeasons()),
-        TypeList(getTypes()),
-        LangList(getLangs()),
-        SubsList(getSubs()),
+        SelectGroup("sort", "Ordina per", getOrder()),
+        CheckboxGroup("categories", "Generi", getGenres()),
+        CheckboxGroup("years", "Anno di Uscita", getYears()),
+        CheckboxGroup("seasons", "Stagione di Uscita", getReleaseSeasons()),
+        CheckboxGroup("states", "Stato", getStates()),
+        CheckboxGroup("types", "Tipo", getTypes()),
+        CheckboxGroup("languages", "Lingua", getLangs()),
+        SelectGroup("dub", "Sottotitoli", getSubs()),
     )
 
-    private fun getSearchParameters(filters: AnimeFilterList): String {
-        var totalString = ""
-        var variantGenre = 0
-        var variantState = 0
-        var variantSeason = 0
-        var variantType = 0
-        var variantYear = 0
-        var variantLang = 0
-        var variantSubs = 0
+    private fun getSearchParameters(url: HttpUrl.Builder, filters: AnimeFilterList) {
         filters.forEach { filter ->
             when (filter) {
-                is GenreList -> { // ---Genre
-                    filter.state.forEach { genre ->
-                        if (genre.state) {
-                            totalString = totalString + "&categories%5B" + variantGenre.toString() + "%5D=" + genre.id
-                            variantGenre++
-                        }
+                is CheckboxGroup -> {
+                    filter.state.filter { it.state }.forEachIndexed { index, option ->
+                        url.addQueryParameter("${filter.key}[$index]", option.id)
                     }
                 }
 
-                is YearList -> { // ---Year
-                    filter.state.forEach { year ->
-                        if (year.state) {
-                            totalString = totalString + "&years%5B" + variantYear.toString() + "%5D=" + year.id
-                            variantYear++
-                        }
+                is SelectGroup -> {
+                    filter.values[filter.state].id.takeIf { it.isNotEmpty() }?.let {
+                        url.addQueryParameter(filter.key, it)
                     }
                 }
 
-                is StateList -> { // ---State
-                    filter.state.forEach { state ->
-                        if (state.state) {
-                            totalString = totalString + "&states%5B" + variantState.toString() + "%5D=" + state.id
-                            variantState++
-                        }
-                    }
-                }
-
-                is TypeList -> { // ---Type
-                    filter.state.forEach { type ->
-                        if (type.state) {
-                            totalString = totalString + "&types%5B" + variantType.toString() + "%5D=" + type.id
-                            variantType++
-                        }
-                    }
-                }
-
-                is LangList -> { // ---Lang
-                    filter.state.forEach { lang ->
-                        if (lang.state) {
-                            totalString = totalString + "&languages%5B" + variantLang.toString() + "%5D=" + lang.id
-                            variantLang++
-                        }
-                    }
-                }
-
-                is SubsList -> { // ---Subs
-                    filter.state.forEach { subs ->
-                        if (subs.state) {
-                            totalString = totalString + "&subtitles%5B" + variantSubs.toString() + "%5D=" + subs.id
-                            variantSubs++
-                        }
-                    }
-                }
-
-                is ReleaseSeasonList -> { // ---Release Season
-                    filter.state.forEach { season ->
-                        if (season.state) {
-                            totalString = totalString + "&release_seasons%5B" + variantSeason.toString() + "%5D=" + season.id
-                            variantSeason++
-                        }
-                    }
-                }
-
-                is OrderList -> { // ---Sorts
-                    val order = filter.values[filter.state]
-                    totalString = totalString + "&sort=" + order.id
-                }
-
-                else -> {}
+                else -> Unit
             }
         }
-        return totalString
     }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
