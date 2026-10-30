@@ -373,7 +373,7 @@ abstract class HentaiSaturn :
         FilterGroup("states", "Stato", getStates()),
         FilterGroup("types", "Tipo", getTypes()),
         FilterGroup("languages", "Lingua", getLangs()),
-        FilterGroup("subtitles", "Sottotitoli", getSubs()),
+        FilterGroup("dub", "Sottotitoli", getSubs()),
     )
 
     private fun getSearchParameters(url: HttpUrl.Builder, filters: AnimeFilterList) {
