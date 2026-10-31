@@ -180,8 +180,8 @@ abstract class HentaiSaturn :
 
     override fun searchAnimeParse(response: Response): AnimesPage {
         val document = response.asJsoup()
-        val anime = document.select("a.group[href]:not(.flex)").map(::searchAnimeFromElement)
-        return AnimesPage(anime, document.selectFirst("a[rel=\"next\"]") != null)
+        val anime = document.select(ANIME_SELECTOR).map(::searchAnimeFromElement)
+        return AnimesPage(anime, document.selectFirst(NEXT_PAGE_SELECTOR) != null)
     }
 
     override fun animeDetailsParse(response: Response): SAnime {
