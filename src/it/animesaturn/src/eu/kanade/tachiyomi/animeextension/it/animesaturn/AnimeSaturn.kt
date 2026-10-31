@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.animeextension.it.animesaturn
 
+import android.util.Log
 import androidx.preference.PreferenceScreen
 import aniyomi.lib.playlistutils.PlaylistUtils
 import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
@@ -19,6 +20,8 @@ import keiyoushi.annotation.Source
 import keiyoushi.utils.addListPreference
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
+import keiyoushi.utils.tryParse
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -43,20 +46,31 @@ abstract class AnimeSaturn :
 
     private val preferences by getPreferencesLazy()
 
-//    override suspend fun getEpisodeList(anime: SAnime): List<SEpisode> {
-//        val episodes = client.newCall(episodeListRequest(anime))
-//            .awaitSuccess()
-//            .use(::episodeListParse)
-//
-//        return episodes.map { enrichEpisode(it) }
-//    }
-
     override fun popularAnimeRequest(page: Int): Request = GET("$baseUrl/ongoing/$page", headers)
     override fun popularAnimeParse(response: Response): AnimesPage = searchAnimeParse(response)
 
     override fun episodeListParse(response: Response): List<SEpisode> {
         val document = response.asJsoup()
         return document.select("a.ep-tile").map { episodeFromElement(it) }.reversed()
+    }
+
+    override suspend fun getEpisodeList(anime: SAnime): List<SEpisode> {
+        val episodes = client.newCall(episodeListRequest(anime))
+            .awaitSuccess()
+            .use(::episodeListParse)
+
+        val latestDate = try {
+            episodes.firstOrNull()?.let { getEpisodeDate(it) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("AnimeSaturn", "Failed to fetch the latest episode date", e)
+            null
+        }
+        if (latestDate != null) {
+            episodes.forEach { it.date_upload = latestDate }
+        }
+        return episodes
     }
 
     fun episodeFromElement(element: Element): SEpisode {
@@ -73,33 +87,22 @@ abstract class AnimeSaturn :
         return episode
     }
 
-//    private suspend fun enrichEpisode(episode: SEpisode): SEpisode {
-//        client.newCall(GET(baseUrl + episode.url, headers))
-//            .awaitSuccess()
-//            .use { response ->
-//                val tvEpisode = response.asJsoup()
-//                    .head()
-//                    .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
-//                    ?.data()
-//                    ?.let { runCatching { it.parseAs<TVEpisodeLD>() }.getOrNull() }
-//                    ?: return episode
-//
-//                tvEpisode.datePublished
-//                    ?.takeIf { it.isNotEmpty() }
-//                    ?.let { episode.date_upload = dateFormat.tryParse(it) }
-//
-//                tvEpisode.episodeNumber?.let { episode.episode_number = it }
-//
-//                val seriesName = tvEpisode.partOfSeries?.name
-//                episode.name = tvEpisode.name
-//                    ?.let { name -> seriesName?.let { name.substringAfter(it).trim() } ?: name }
-//                    ?.ifEmpty { episode.name }
-//                    ?: episode.name
-//            }
-//        return episode
-//    }
+    private suspend fun getEpisodeDate(episode: SEpisode): Long? {
+        return client.newCall(GET(baseUrl + episode.url, headers))
+            .awaitSuccess()
+            .use { response ->
+                val tvEpisode = response.asJsoup()
+                    .head()
+                    .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
+                    ?.data()
+                    ?.let { runCatching { it.parseAs<TVEpisodeLD>() }.getOrNull() }
+                    ?: return null
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
+                tvEpisode.datePublished
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).tryParse(it) }
+            }
+    }
 
     @Serializable
     internal class TVEpisodeLD(
