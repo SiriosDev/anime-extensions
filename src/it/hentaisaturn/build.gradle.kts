@@ -6,7 +6,7 @@ yuzono {
     name = "Hentai Saturn"
     versionCode = 15
     contentWarning = ContentWarning.NSFW
-    libVersion = "14"
+    libVersion = "16"
 
     source {
         name = "HentaiSaturn"

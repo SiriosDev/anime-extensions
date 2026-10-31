@@ -6,24 +6,24 @@ import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimeUpdateStrategy
+import eu.kanade.tachiyomi.animesource.model.AnimesPage
+import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
+import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.annotation.Source
-import keiyoushi.utils.ParsedAnimeHttpLegacySource
 import keiyoushi.utils.addListPreference
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
-import keiyoushi.utils.tryParse
 import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
-import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -36,37 +36,23 @@ private val alterTitleRegex = Regex("\\s+\\(\\w+\\)")
 
 @Source
 abstract class HentaiSaturn :
-    ParsedAnimeHttpLegacySource(),
+    AnimeHttpSource(),
     ConfigurableAnimeSource {
 
     override val supportsLatest = true
 
     private val preferences by getPreferencesLazy()
 
-    override fun popularAnimeSelector(): String = ANIME_SELECTOR
-
     override fun popularAnimeRequest(page: Int): Request = GET("$baseUrl/ongoing/$page", headers)
 
-    override fun popularAnimeFromElement(element: Element): SAnime = searchAnimeFromElement(element)
-
-    override fun popularAnimeNextPageSelector(): String = NEXT_PAGE_SELECTOR
-
-    override suspend fun getEpisodeList(anime: SAnime): List<SEpisode> {
-        val episodes = client.newCall(episodeListRequest(anime))
-            .awaitSuccess()
-            .use(::episodeListParse)
-
-        return episodes.map { enrichEpisode(it) }
-    }
+    override fun popularAnimeParse(response: Response): AnimesPage = searchAnimeParse(response)
 
     override fun episodeListParse(response: Response): List<SEpisode> {
         val document = response.asJsoup()
-        return document.select(episodeListSelector()).map { episodeFromElement(it) }.reversed()
+        return document.select("a.ep-tile").map { episodeFromElement(it) }.reversed()
     }
 
-    override fun episodeListSelector() = "a.ep-tile"
-
-    override fun episodeFromElement(element: Element): SEpisode {
+    fun episodeFromElement(element: Element): SEpisode {
         val episode = SEpisode.create()
         episode.setUrlWithoutDomain(
             element.attr("href")
@@ -80,32 +66,32 @@ abstract class HentaiSaturn :
         return episode
     }
 
-    private suspend fun enrichEpisode(episode: SEpisode): SEpisode {
-        client.newCall(GET(baseUrl + episode.url, headers))
-            .awaitSuccess()
-            .use { response ->
-                val tvEpisode = response.asJsoup()
-                    .head()
-                    .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
-                    ?.data()
-                    ?.let { runCatching { it.parseAs<TVEpisodeLD>() }.getOrNull() }
-                    ?: return episode
-
-                tvEpisode.datePublished
-                    ?.takeIf { it.isNotEmpty() }
-                    ?.let { episode.date_upload = dateFormat.tryParse(it) }
-
-                tvEpisode.episodeNumber?.let { episode.episode_number = it }
-
-                val seriesName = tvEpisode.partOfSeries?.name
-                episode.name = tvEpisode.name
-                    ?.let { name -> seriesName?.let { name.substringAfter(it).trim() } ?: name }
-                    ?.ifEmpty { episode.name }
-                    ?: episode.name
-            }
-
-        return episode
-    }
+//    private suspend fun enrichEpisode(episode: SEpisode): SEpisode {
+//        client.newCall(GET(baseUrl + episode.url, headers))
+//            .awaitSuccess()
+//            .use { response ->
+//                val tvEpisode = response.asJsoup()
+//                    .head()
+//                    .selectFirst("script[type=\"application/ld+json\"]:containsData(\"TVEpisode\")")
+//                    ?.data()
+//                    ?.let { runCatching { it.parseAs<TVEpisodeLD>() }.getOrNull() }
+//                    ?: return episode
+//
+//                tvEpisode.datePublished
+//                    ?.takeIf { it.isNotEmpty() }
+//                    ?.let { episode.date_upload = dateFormat.tryParse(it) }
+//
+//                tvEpisode.episodeNumber?.let { episode.episode_number = it }
+//
+//                val seriesName = tvEpisode.partOfSeries?.name
+//                episode.name = tvEpisode.name
+//                    ?.let { name -> seriesName?.let { name.substringAfter(it).trim() } ?: name }
+//                    ?.ifEmpty { episode.name }
+//                    ?: episode.name
+//            }
+//
+//        return episode
+//    }
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
 
@@ -122,27 +108,21 @@ abstract class HentaiSaturn :
         val name: String? = null,
     )
 
-    private val playlistUtils by lazy { PlaylistUtils(client, headers) }
+    override fun hosterListRequest(episode: SEpisode): Request = GET(baseUrl + episode.url, headers)
 
-    override fun videoListParse(response: Response): List<Video> {
-        if (response.code != 200) {
-            return emptyList()
-        }
-
-        val token = response.request.url.queryParameter("token") ?: return emptyList()
-        val playlistModel = response.parseAs<PlaylistModel>()
-        val videoUrl = decodeUrl(playlistModel.d, token)
-        if (videoUrl.contains(".mp4")) {
-            return listOf(
-                Video(
-                    videoTitle = "Qualità predefinita",
-                    videoUrl = videoUrl,
-                ),
-            )
-        }
-
-        return playlistUtils.extractFromHls(videoUrl)
+    override fun hosterListParse(response: Response): List<Hoster> {
+        val episodePage = response.asJsoup()
+        val url = episodePage.selectFirst("iframe")!!.attr("src")
+        return listOf(
+            Hoster(
+                hosterName = "HentaiSaturn Server",
+                hosterUrl = url.replace("?", "/playlist?"),
+                internalData = url,
+            ),
+        )
     }
+
+    private val playlistUtils by lazy { PlaylistUtils(client, headers) }
 
     private fun decodeUrl(url: String, token: String): String {
         val base = Base64.decode(url).decodeToString()
@@ -153,18 +133,27 @@ abstract class HentaiSaturn :
         }
     }
 
-    override fun videoListRequest(episode: SEpisode): Request {
-        val episodePage = client.newCall(GET(baseUrl + episode.url, headers)).execute().asJsoup()
-        val url = episodePage.selectFirst("iframe")!!.attr("src")
-        return Request.Builder()
-            .url(url.replace("?", "/playlist?"))
-            .header("Referer", url)
+    override suspend fun getVideoList(hoster: Hoster): List<Video> {
+        val request = Request.Builder()
+            .url(hoster.hosterUrl)
+            .header("Referer", hoster.internalData)
             .build()
+        client.newCall(request).awaitSuccess().use { response ->
+            val token = response.request.url.queryParameter("token") ?: return emptyList()
+            val playlistModel = response.parseAs<PlaylistModel>()
+            val videoUrl = decodeUrl(playlistModel.d, token)
+
+            if (videoUrl.contains(".mp4")) {
+                return listOf(
+                    Video(
+                        videoUrl = videoUrl,
+                        videoTitle = "Qualità predefinita",
+                    ),
+                )
+            }
+            return playlistUtils.extractFromHls(videoUrl)
+        }
     }
-
-    override fun videoListSelector() = throw UnsupportedOperationException()
-
-    override fun videoFromElement(element: Element) = throw UnsupportedOperationException()
 
     override fun List<Video>.sortVideos(): List<Video> {
         val prQuality = preferences.getString(PREF_QUALITY, QUALITY_DEFAULT)!!
@@ -174,17 +163,13 @@ abstract class HentaiSaturn :
         )
     }
 
-    override fun searchAnimeFromElement(element: Element): SAnime {
+    fun searchAnimeFromElement(element: Element): SAnime {
         val anime = SAnime.create()
         anime.setUrlWithoutDomain(element.attr("href"))
         anime.title = element.selectFirst("h3")!!.text()
         anime.thumbnail_url = element.selectFirst("img")?.attr("src")
         return anime
     }
-
-    override fun searchAnimeNextPageSelector(): String = NEXT_PAGE_SELECTOR
-
-    override fun searchAnimeSelector(): String = ANIME_SELECTOR
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
         val url = "$baseUrl/filter/$page".toHttpUrl().newBuilder()
@@ -193,7 +178,14 @@ abstract class HentaiSaturn :
         return GET(url.build(), headers)
     }
 
-    override fun animeDetailsParse(document: Document): SAnime {
+    override fun searchAnimeParse(response: Response): AnimesPage {
+        val document = response.asJsoup()
+        val anime = document.select("a.group[href]:not(.flex)").map(::searchAnimeFromElement)
+        return AnimesPage(anime, document.selectFirst("a[rel=\"next\"]") != null)
+    }
+
+    override fun animeDetailsParse(response: Response): SAnime {
+        val document = response.asJsoup()
         val anime = SAnime.create()
         anime.title = document.selectFirst("h1")!!.text()
         anime.author = document.selectFirst("div a[href*=studios]")?.text()
@@ -239,12 +231,10 @@ abstract class HentaiSaturn :
         else -> SAnime.UNKNOWN
     }
 
-    override fun latestUpdatesSelector(): String = ANIME_SELECTOR
-
-    override fun latestUpdatesFromElement(element: Element): SAnime = searchAnimeFromElement(element)
     override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/newest/$page", headers)
+    override fun latestUpdatesParse(response: Response): AnimesPage = searchAnimeParse(response)
 
-    override fun latestUpdatesNextPageSelector(): String = NEXT_PAGE_SELECTOR
+    override fun seasonListParse(response: Response): List<SAnime> = throw UnsupportedOperationException()
 
     // Filters
     private class CheckboxFilter(val id: String, name: String) : AnimeFilter.CheckBox(name)
